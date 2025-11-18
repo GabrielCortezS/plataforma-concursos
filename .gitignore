@@ -1,0 +1,69 @@
+# ---- Node ----
+node_modules/
+**/node_modules/
+
+# ---- Environment files ----
+.env
+*.env
+
+# ---- Uploads ----
+uploads/
+**/uploads/
+
+# ---- Logs ----
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ---- Next.js ----
+.next/
+out/
+
+# ---- Build ----
+dist/
+build/
+
+# ---- OS files ----
+.DS_Store
+Thumbs.db
+
+# ---- VSCode ----
+.vscode/
+
+# ---- Temporary ----
+tmp/
+temp/
+
+# Ignorar dependências
+node_modules/
+plataforma-concursos-backend/node_modules/
+plataforma-concursos-frontend/node_modules/
+
+# Ignorar envs
+.env
+plataforma-concursos-backend/.env
+plataforma-concursos-frontend/.env
+
+# Ignorar uploads e arquivos enviados pelo usuário
+plataforma-concursos-backend/uploads/
+plataforma-concursos-backend/uploads/**
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Sistema
+.DS_Store
+Thumbs.db
+
+# Builds do Next.js
+plataforma-concursos-frontend/.next/
+plataforma-concursos-frontend/out/
+
+# Cache
+.cache/
+.next/
+dist/
