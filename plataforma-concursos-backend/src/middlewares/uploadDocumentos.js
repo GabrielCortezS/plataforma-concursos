@@ -1,23 +1,29 @@
 import multer from "multer";
 import path from "path";
+import fs from "fs";
 
-// Configuração do armazenamento
-
+// ⚙️ Configuração do armazenamento (Multer)
 const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        //Criar a pasta de uploads se não existir
-        cb(null, "uploads/documentos/");
-    },
+  destination: (req, file, cb) => {
+    // 📁 Pasta onde os documentos serão armazenados
+    const dir = "uploads/documentos";
 
-    filename: (req, file, cb) => {
-        //Nome unico evitar conflitos
-        const nomeArquivo = Date.now() + "-" + file.originalname;
-        cb(null, nomeArquivo);
+    // 🔹 Cria a pasta automaticamente se não existir
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
     }
 
+    cb(null, dir);
+  },
+
+  filename: (req, file, cb) => {
+    // 🔹 Gera nome único para evitar conflito de arquivos
+    const nomeArquivo = Date.now() + "-" + file.originalname;
+    cb(null, nomeArquivo);
+  }
 });
 
-// Filtro de tipos permitidos
+// 🔍 Filtro de tipos permitidos (PDF e imagens)
 function fileFilter(req, file, cb) {
   const tiposPermitidos = [
     "application/pdf",
@@ -26,13 +32,15 @@ function fileFilter(req, file, cb) {
     "image/jpeg"
   ];
 
-   if (tiposPermitidos.includes(file.mimetype)) {
+  // Aceita apenas tipos permitidos
+  if (tiposPermitidos.includes(file.mimetype)) {
     cb(null, true);
   } else {
     cb(new Error("Tipo de arquivo não permitido"), false);
   }
 }
 
+// 🚀 Exporta o middleware configurado
 export const uploadDocumentos = multer({
   storage,
   fileFilter
