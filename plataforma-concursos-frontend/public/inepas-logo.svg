@@ -1,0 +1,24 @@
+<svg width="480" height="170" viewBox="0 0 480 170" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- LIVRO -->
+  <path d="M90 115C90 115 90 78 90 68C90 60 96 55 108 55C120 55 126 60 126 68V115L108 108L90 115Z" fill="#0A2A4A"/>
+  <path d="M108 108L126 115V68C126 60 132 55 144 55C156 55 162 60 162 68V115L144 108L126 115" fill="#0A2A4A"/>
+  
+  <!-- CHAMA -->
+  <path d="M121 40C121 28 131 20 137 14C143 8 145 1 145 1C145 1 149 10 147 20C145 30 136 38 136 46C136 55 144 61 144 61C144 61 133 61 127 54C123 49 121 45 121 40Z" fill="#D5A449"/>
+  
+  <!-- TEXTO INEPAS -->
+  <text x="185" y="80" font-family="Arial, sans-serif" font-weight="700" font-size="48" fill="#0A2A4A">
+    INEPAS
+  </text>
+
+  <!-- TEXTO INSTITUCIONAL -->
+  <text x="185" y="110" font-family="Arial, sans-serif" font-size="17" fill="#0A2A4A">
+    INSTITUTO NACIONAL DE
+  </text>
+  <text x="185" y="132" font-family="Arial, sans-serif" font-size="17" fill="#0A2A4A">
+    EXAMES E PROCESSOS
+  </text>
+  <text x="185" y="154" font-family="Arial, sans-serif" font-size="17" fill="#0A2A4A">
+    DE AVALIAÇÃO E SELEÇÃO
+  </text>
+</svg>
