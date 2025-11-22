@@ -1,4 +1,6 @@
+// src/controllers/concursoController.js
 import Concurso from "../models/Concurso.js";
+import Cargo from "../models/Cargo.js";
 import fs from "fs";
 import path from "path";
 import { deleteFile } from "../utils/fileUtils.js";
@@ -98,9 +100,7 @@ export const atualizarConcurso = async (req, res) => {
     const concurso = await Concurso.findById(id);
 
     if (!concurso) {
-      return res.status(404).json({
-        mensagem: "Concurso não encontrado",
-      });
+      return res.status(404).json({ mensagem: "Concurso não encontrado" });
     }
 
     let novosDocumentos = [];
@@ -111,8 +111,7 @@ export const atualizarConcurso = async (req, res) => {
       // 🗑 REMOVER ARQUIVOS ANTIGOS
       if (concurso.documentos && concurso.documentos.length > 0) {
         concurso.documentos.forEach((doc) => {
-          const caminhoCorrigido = doc.caminho.replace(/\\/g, "/");
-          deleteFile(caminhoCorrigido);
+          deleteFile(doc.caminho);
         });
       }
 
@@ -125,7 +124,7 @@ export const atualizarConcurso = async (req, res) => {
       }));
     }
 
-    // Atualiza concurso no banco
+    // Atualiza concurso
     const concursoAtualizado = await Concurso.findByIdAndUpdate(
       id,
       {
@@ -153,7 +152,9 @@ export const atualizarConcurso = async (req, res) => {
 
 /*
 |--------------------------------------------------------------------------
-| 5) DELETAR CONCURSO (REMOVE DOCUMENTOS DO SERVIDOR)
+| 5) DELETAR CONCURSO 
+|   - REMOVE DOCUMENTOS DO SERVIDOR 
+|   - REMOVE CARGOS VINCULADOS A ESSE CONCURSO
 |--------------------------------------------------------------------------
 */
 export const deletarConcurso = async (req, res) => {
@@ -171,16 +172,24 @@ export const deletarConcurso = async (req, res) => {
     // 🗑 Remover documentos antigos
     if (concurso.documentos && concurso.documentos.length > 0) {
       concurso.documentos.forEach((doc) => {
-        const caminhoCorrigido = doc.caminho.replace(/\\/g, "/");
-        deleteFile(caminhoCorrigido);
+        deleteFile(doc.caminho);
       });
     }
 
-    // Remover do banco
+    // 🗑 Encontrar cargos vinculados
+    const cargosVinculados = await Cargo.find({ concursoId: id });
+
+    // 🤝 Apagar cada cargo
+    for (const cargo of cargosVinculados) {
+      await Cargo.findByIdAndDelete(cargo._id);
+    }
+
+    // Remover o concurso do banco
     await Concurso.findByIdAndDelete(id);
 
     return res.json({
-      mensagem: "Concurso deletado com sucesso",
+      mensagem: "Concurso e cargos vinculados deletados com sucesso",
+      cargosRemovidos: cargosVinculados.length,
     });
 
   } catch (error) {
@@ -201,7 +210,9 @@ export const downloadDocumento = (req, res) => {
     const arquivo = req.params.arquivo;
 
     // Normaliza caminho
-    const caminhoArquivo = path.join("uploads/documentos", arquivo).replace(/\\/g, "/");
+    const caminhoArquivo = path
+      .join("uploads/documentos", arquivo)
+      .replace(/\\/g, "/");
 
     if (fs.existsSync(caminhoArquivo)) {
       return res.download(caminhoArquivo);

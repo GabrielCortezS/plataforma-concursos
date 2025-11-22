@@ -1,74 +1,63 @@
+// src/models/Inscricao.js
+// Model de Inscrição do candidato
+
 import mongoose from "mongoose";
 
-// Define a estrutura (schema) da inscrição
 const InscricaoSchema = new mongoose.Schema(
   {
-    nomeCompleto: {
-      type: String,
-      required: true,
-    },
+    // Dados básicos do candidato
+    nomeCompleto: { type: String, required: true },
+    cpf: { type: String, required: true },
+    email: { type: String, required: true },
+    telefone: { type: String, required: true },
 
-    cpf: {
-      type: String,
-      required: true,
-    },
-
-    email: {
-      type: String,
-      required: true,
-    },
-
-    telefone: {
-      type: String,
-    },
-
-    // Relacionamento com Concurso
+    // Relacionamentos
     concursoId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Concurso",
       required: true,
     },
-
-    // Relacionamento com Cargo
     cargoId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Cargo",
       required: true,
     },
 
-    // Caminho da foto enviada pelo candidato
+    // Foto 3x4 salva no servidor
     foto: {
-      type: String,
+      type: String, // ex: "uploads/fotos/xxxx.png"
     },
 
-    status: {
-      type: String,
-      enum: ["pendente", "confirmado", "cancelado"],
-      default: "pendente",
-    },
-
-  
-   //  Campos de Concordância
-    
+    // Termos e auditoria de concordância
     concordaTermos: {
       type: Boolean,
-      required: true, // obrigatório para criar inscrição
+      default: false,
     },
-
     dataConcordancia: {
-      type: Date, // data/hora exata da concordância
+      type: Date,
     },
-
     ipConcordancia: {
-      type: String, // IP público do usuário
+      type: String,
+    },
+    userAgent: {
+      type: String,
     },
 
-    userAgent: {
-      type: String, // Dispositivo/navegador utilizado
+    // 🔹 Número único da inscrição (para mostrar no comprovante)
+    numeroInscricao: {
+      type: String,
+      required: true,
+      unique: true,
+    },
+
+    // 🔹 Caminho do PDF do comprovante
+    comprovantePdf: {
+      type: String, // ex: "uploads/comprovantes/comprovante_<id>.pdf"
     },
   },
-  { timestamps: true } // cria createdAt e updatedAt automaticamente
+  {
+    timestamps: true, // createdAt / updatedAt
+  }
 );
 
-// Exporta o model para uso nos controllers
 export default mongoose.model("Inscricao", InscricaoSchema);

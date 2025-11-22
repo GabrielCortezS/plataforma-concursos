@@ -23,8 +23,9 @@ app.use("/api/auth", authRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/concursos", concursoRoutes);
 app.use("/api/cargos", cargoRoutes);
-app.use("/inscricoes", inscricaoRoutes);
+app.use("/api/inscricoes", inscricaoRoutes);
 app.use("/api/candidato", candidatoAuthRoutes);
+app.use("/comprovantes", express.static("comprovantes"));
 
 // Permitir acesso à pasta uploads
 app.use("/uploads", express.static("uploads"));
