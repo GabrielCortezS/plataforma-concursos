@@ -39,18 +39,17 @@ export default function LoginPage() {
       // 🔹 Salva token no navegador
       localStorage.setItem("token", data.token);
 
-      // 🔹 Verifica se existe rota de retorno (redirect)
-      const params = new URLSearchParams(window.location.search);
-      const redirect = params.get("redirect");
+  // 🔹 Verifica se existe rota salva pelo sistema (rota protegida)
+  const redirectTo = localStorage.getItem("redirectTo");
 
-      // 🔹 Se existir redirect → volta exatamente para a tela anterior
-      if (redirect) {
-        window.location.href = redirect;
-        return;
-      }
+  if (redirectTo) {
+    localStorage.removeItem("redirectTo"); // remove para não usar de novo
+    window.location.href = redirectTo;
+    return;
+}
 
-      // 🔹 Caso contrário → vai para o dashboard
-      window.location.href = "/candidato/dashboard";
+  // 🔹 Se não tiver redirect salvo → vai para a página padrão
+  window.location.href = "/candidato";
 
     } catch (err) {
       setErro("Erro ao conectar com o servidor");
