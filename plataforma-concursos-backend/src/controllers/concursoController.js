@@ -7,28 +7,35 @@ import { deleteFile } from "../utils/fileUtils.js";
 
 /*
 |--------------------------------------------------------------------------
-| 1) CRIAR CONCURSO  (UPLOAD DE DOCUMENTOS)
+| 1) CRIAR CONCURSO — Datas como STRING + Upload de documentos
 |--------------------------------------------------------------------------
 */
 export const criarConcurso = async (req, res) => {
   try {
     const documentosProcessados = [];
 
-    // Processa documentos enviados (PDFs, imagens etc)
+    // 📎 Processa arquivos enviados
     if (req.files && req.files.length > 0) {
       req.files.forEach((file) => {
         documentosProcessados.push({
           nome: file.originalname,
-          caminho: file.path.replace(/\\/g, "/"), // normaliza caminho
+          caminho: file.path.replace(/\\/g, "/"),
           tipo: file.mimetype,
           enviadoEm: new Date(),
         });
       });
     }
 
-    // Cria o concurso
+    // 🟦 Cria o concurso (datas são strings YYYY-MM-DD)
     const novoConcurso = await Concurso.create({
-      ...req.body,
+      titulo: req.body.titulo,
+      orgao: req.body.orgao,
+      edital: req.body.edital,
+      descricao: req.body.descricao,
+      dataInicioInscricao: req.body.dataInicioInscricao,
+      dataFimInscricao: req.body.dataFimInscricao,
+      dataProva: req.body.dataProva,
+      status: req.body.status,
       documentos: documentosProcessados,
     });
 
@@ -47,12 +54,12 @@ export const criarConcurso = async (req, res) => {
 
 /*
 |--------------------------------------------------------------------------
-| 2) LISTAR TODOS OS CONCURSOS
+| 2) LISTAR CONCURSOS
 |--------------------------------------------------------------------------
 */
 export const listarConcursos = async (req, res) => {
   try {
-    const concursos = await Concurso.find();
+    const concursos = await Concurso.find().sort({ createdAt: -1 });
     return res.json(concursos);
 
   } catch (error) {
@@ -74,7 +81,9 @@ export const buscarConcursoPorId = async (req, res) => {
     const concurso = await Concurso.findById(id);
 
     if (!concurso) {
-      return res.status(404).json({ mensagem: "Concurso não encontrado" });
+      return res.status(404).json({
+        mensagem: "Concurso não encontrado",
+      });
     }
 
     return res.json(concurso);
@@ -89,34 +98,33 @@ export const buscarConcursoPorId = async (req, res) => {
 
 /*
 |--------------------------------------------------------------------------
-| 4) ATUALIZAR CONCURSO (REMOVE DOCS ANTIGOS + NOVOS UPLOADS)
+| 4) ATUALIZAR CONCURSO (OPÇÃO 3 — substitui documentos apenas se enviar)
 |--------------------------------------------------------------------------
 */
 export const atualizarConcurso = async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Busca o concurso atual
+    // 🔍 Busca concurso existente
     const concurso = await Concurso.findById(id);
 
     if (!concurso) {
-      return res.status(404).json({ mensagem: "Concurso não encontrado" });
+      return res.status(404).json({
+        mensagem: "Concurso não encontrado",
+      });
     }
 
-    let novosDocumentos = [];
+    let documentosFinal = concurso.documentos; // Mantém documentos antigos por padrão
 
-    // Se novos arquivos foram enviados:
+    // 📎 Se arquivos novos foram enviados → REMOVER antigos + substituir
     if (req.files && req.files.length > 0) {
 
-      // 🗑 REMOVER ARQUIVOS ANTIGOS
+      // 🗑 Apaga arquivos antigos do servidor
       if (concurso.documentos && concurso.documentos.length > 0) {
-        concurso.documentos.forEach((doc) => {
-          deleteFile(doc.caminho);
-        });
+        concurso.documentos.forEach((doc) => deleteFile(doc.caminho));
       }
 
-      // SALVAR NOVOS DOCUMENTOS
-      novosDocumentos = req.files.map((file) => ({
+      documentosFinal = req.files.map((file) => ({
         nome: file.originalname,
         caminho: file.path.replace(/\\/g, "/"),
         tipo: file.mimetype,
@@ -124,15 +132,22 @@ export const atualizarConcurso = async (req, res) => {
       }));
     }
 
-    // Atualiza concurso
+    // 🟦 Atualizar campos (datas são strings)
     const concursoAtualizado = await Concurso.findByIdAndUpdate(
       id,
       {
-        ...req.body,
-        documentos:
-          req.files && req.files.length > 0
-            ? novosDocumentos
-            : concurso.documentos,
+        titulo: req.body.titulo ?? concurso.titulo,
+        orgao: req.body.orgao ?? concurso.orgao,
+        edital: req.body.edital ?? concurso.edital,
+        descricao: req.body.descricao ?? concurso.descricao,
+
+        dataInicioInscricao: req.body.dataInicioInscricao ?? concurso.dataInicioInscricao,
+        dataFimInscricao: req.body.dataFimInscricao ?? concurso.dataFimInscricao,
+        dataProva: req.body.dataProva ?? concurso.dataProva,
+
+        status: req.body.status ?? concurso.status,
+
+        documentos: documentosFinal,
       },
       { new: true }
     );
@@ -152,9 +167,7 @@ export const atualizarConcurso = async (req, res) => {
 
 /*
 |--------------------------------------------------------------------------
-| 5) DELETAR CONCURSO 
-|   - REMOVE DOCUMENTOS DO SERVIDOR 
-|   - REMOVE CARGOS VINCULADOS A ESSE CONCURSO
+| 5) DELETAR CONCURSO + documentos + cargos vinculados
 |--------------------------------------------------------------------------
 */
 export const deletarConcurso = async (req, res) => {
@@ -162,34 +175,27 @@ export const deletarConcurso = async (req, res) => {
     const { id } = req.params;
 
     const concurso = await Concurso.findById(id);
-
     if (!concurso) {
-      return res.status(404).json({
-        mensagem: "Concurso não encontrado",
-      });
+      return res.status(404).json({ mensagem: "Concurso não encontrado" });
     }
 
-    // 🗑 Remover documentos antigos
-    if (concurso.documentos && concurso.documentos.length > 0) {
-      concurso.documentos.forEach((doc) => {
-        deleteFile(doc.caminho);
-      });
+    // 🗑 Remover documentos físicos
+    if (concurso.documentos.length > 0) {
+      concurso.documentos.forEach((doc) => deleteFile(doc.caminho));
     }
 
-    // 🗑 Encontrar cargos vinculados
-    const cargosVinculados = await Cargo.find({ concursoId: id });
-
-    // 🤝 Apagar cada cargo
-    for (const cargo of cargosVinculados) {
+    // 🗑 Deletar cargos vinculados
+    const cargos = await Cargo.find({ concursoId: id });
+    for (const cargo of cargos) {
       await Cargo.findByIdAndDelete(cargo._id);
     }
 
-    // Remover o concurso do banco
+    // 🗑 Remover concurso
     await Concurso.findByIdAndDelete(id);
 
     return res.json({
       mensagem: "Concurso e cargos vinculados deletados com sucesso",
-      cargosRemovidos: cargosVinculados.length,
+      cargosRemovidos: cargos.length,
     });
 
   } catch (error) {
@@ -209,16 +215,15 @@ export const downloadDocumento = (req, res) => {
   try {
     const arquivo = req.params.arquivo;
 
-    // Normaliza caminho
     const caminhoArquivo = path
       .join("uploads/documentos", arquivo)
       .replace(/\\/g, "/");
 
     if (fs.existsSync(caminhoArquivo)) {
       return res.download(caminhoArquivo);
-    } else {
-      return res.status(404).json({ mensagem: "Arquivo não encontrado" });
     }
+
+    return res.status(404).json({ mensagem: "Arquivo não encontrado" });
 
   } catch (error) {
     return res.status(500).json({

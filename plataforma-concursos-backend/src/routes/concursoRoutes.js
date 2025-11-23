@@ -1,3 +1,4 @@
+// src/routes/concursoRoutes.js
 import express from "express";
 import {
   criarConcurso,
@@ -5,34 +6,61 @@ import {
   atualizarConcurso,
   deletarConcurso,
   buscarConcursoPorId,
+  downloadDocumento
 } from "../controllers/concursoController.js";
+
 import { autenticar } from "../middlewares/authMiddleware.js";
+import { verificarAdmin } from "../middlewares/verificarAdmin.js";
 import { uploadDocumentos } from "../middlewares/uploadDocumentos.js";
 
 const router = express.Router();
 
- // Rotas protegidas por autenticação (JWT)
- // Rota para criar concurso (precisa de token de admin) e Enviar vários arquivos: documentos[]
+/*
+|--------------------------------------------------------------------------
+| ADMIN — Criar concurso com upload de documentos
+|--------------------------------------------------------------------------
+*/
 router.post(
   "/",
   autenticar,
-  uploadDocumentos.array("documentos", 10), // até 10 arquivos
+  verificarAdmin,
+  uploadDocumentos.array("documentos", 10),
   criarConcurso
 );
- //Rota para listar todos os concursos (pública por enquanto)
+
+/*
+|--------------------------------------------------------------------------
+| PÚBLICO — Listar e ver detalhes de concursos
+|--------------------------------------------------------------------------
+*/
 router.get("/", listarConcursos);
- //Buscar concurso pelo ID (público por enquanto)
 router.get("/:id", buscarConcursoPorId);
-// Atualizar concurso → precisa de token
+
+/*
+|--------------------------------------------------------------------------
+| ADMIN — Atualizar concurso (troca documentos)
+|--------------------------------------------------------------------------
+*/
 router.put(
   "/:id",
-  autenticar,                                // login obrigatório
-  uploadDocumentos.array("documentos", 10),  // ESSENCIAL para receber arquivos
+  autenticar,
+  verificarAdmin,
+  uploadDocumentos.array("documentos", 10),
   atualizarConcurso
 );
-// Deletar concurso → precisa de token
-router.delete("/:id", autenticar, deletarConcurso);
 
+/*
+|--------------------------------------------------------------------------
+| ADMIN — Deletar concurso
+|--------------------------------------------------------------------------
+*/
+router.delete("/:id", autenticar, verificarAdmin, deletarConcurso);
 
+/*
+|--------------------------------------------------------------------------
+| Download de documentos do concurso (PDF, imagens)
+|--------------------------------------------------------------------------
+*/
+router.get("/download/:arquivo", downloadDocumento);
 
 export default router;

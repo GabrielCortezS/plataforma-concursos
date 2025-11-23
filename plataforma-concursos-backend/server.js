@@ -9,6 +9,8 @@ import concursoRoutes  from "./src/routes/concursoRoutes.js";
 import cargoRoutes from "./src/routes/cargoRoutes.js";
 import inscricaoRoutes from "./src/routes/inscricaoRoutes.js";
 import candidatoAuthRoutes from "./src/routes/candidatoAuthRoutes.js";
+import candidatoRoutes from "./src/routes/candidatoRoutes.js";
+import contatoRoutes from "./src/routes/contatoRoutes.js";
 
 // Configura o uso das variáveis de ambiente
 dotenv.config();
@@ -26,6 +28,8 @@ app.use("/api/cargos", cargoRoutes);
 app.use("/api/inscricoes", inscricaoRoutes);
 app.use("/api/candidato", candidatoAuthRoutes);
 app.use("/comprovantes", express.static("comprovantes"));
+app.use("/api/candidato", candidatoRoutes);
+app.use("/api/contato", contatoRoutes);
 
 // Permitir acesso à pasta uploads
 app.use("/uploads", express.static("uploads"));

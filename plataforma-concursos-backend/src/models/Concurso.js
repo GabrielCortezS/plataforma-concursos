@@ -1,83 +1,100 @@
+// ============================================================================
+// 📄 Model Concurso (Atualizado para evitar problemas de timezone)
+// ----------------------------------------------------------------------------
+// Neste model, TODAS as datas são armazenadas como STRING no formato
+// YYYY-MM-DD, exatamente como enviadas pelo Postman ou pelo Frontend.
+//
+// Por que STRING?
+// - Evita o bug de “um dia antes” causado por UTC
+// - Portais de concurso usam datas sem horário
+// - Facilita listagem, filtros, ordenações e exibição
+// ============================================================================
+
 import mongoose from "mongoose";
 
-// Define a estrutura (schema) do concurso
 const ConcursoSchema = new mongoose.Schema(
   {
+    // ----------------------------------------------------------
+    // 🏷 Título do concurso
+    // ----------------------------------------------------------
     titulo: {
       type: String,
-      required: true, // título do concurso (ex: Prefeitura de Recife)
+      required: true,
+      trim: true,
     },
 
+    // ----------------------------------------------------------
+    // 🏛 Órgão responsável
+    // ----------------------------------------------------------
     orgao: {
       type: String,
-      required: true, // nome do órgão responsável
+      required: true,
+      trim: true,
     },
 
+    // ----------------------------------------------------------
+    // 📑 Edital (nome do edital), NÃO é o arquivo
+    // ----------------------------------------------------------
     edital: {
-      type: String, // URL ou nome do arquivo do edital
+      type: String,
+      required: false,
+      trim: true,
     },
 
+    // ----------------------------------------------------------
+    // 📝 Descrição do concurso
+    // ----------------------------------------------------------
     descricao: {
-      type: String, // descrição geral do concurso
+      type: String,
+      required: true,
     },
 
+    // ----------------------------------------------------------
+    // 📅 Datas (armazenadas como STRING para evitar timezone)
+    // Formato: YYYY-MM-DD
+    // ----------------------------------------------------------
     dataInicioInscricao: {
-      type: Date,
-      required: true, // data em que abrem as inscrições
+      type: String,
+      required: true,
     },
-
     dataFimInscricao: {
-      type: Date,
-      required: true, // data em que encerram as inscrições
+      type: String,
+      required: true,
     },
-
     dataProva: {
-      type: Date, // data prevista da prova
+      type: String,
+      required: true,
     },
 
+    // ----------------------------------------------------------
+    // 🔄 Status do concurso
+    // - "aberto"
+    // - "encerrado"
+    // - "em breve"
+    // ----------------------------------------------------------
     status: {
       type: String,
-      enum: ["aberto", "encerrado", "em andamento"],
-      default: "aberto",
+      enum: ["aberto", "encerrado", "em breve"],
+      default: "em breve",
     },
 
-    // Campo para armazenar documentos do concurso (PDF, imagens, anexos)
+    // ----------------------------------------------------------
+    // 📎 Lista de documentos enviados
+    // Cada documento contém: nome + caminho (uploads/arquivo.pdf)
+    // ----------------------------------------------------------
     documentos: [
       {
-        nome: { type: String },    // Nome original do arquivo
-        caminho: { type: String }, // Caminho salvo no servidor
-        tipo: { type: String }     // Tipo do arquivo (pdf, image, etc)
-      }
-    ]
+        nome: { type: String },
+        caminho: { type: String },
+      },
+    ],
   },
-  { timestamps: true } // cria automaticamente createdAt e updatedAt
+
+  // ----------------------------------------------------------
+  // 🕒 Timestamps (createdAt e updatedAt)
+  // ----------------------------------------------------------
+  { timestamps: true }
 );
 
-/* 
-  🔵 FORMATAÇÃO AUTOMÁTICA DAS DATAS
-  - Sempre que o concurso for enviado como JSON ao frontend,
-    as datas serão convertidas para o formato brasileiro.
-*/
-ConcursoSchema.methods.toJSON = function () {
-  const obj = this.toObject();
-
-  const formatar = (data) => {
-    if (!data) return null;
-    return new Date(data).toLocaleDateString("pt-BR", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-    });
-  };
-
-  obj.dataInicioInscricao = formatar(obj.dataInicioInscricao);
-  obj.dataFimInscricao = formatar(obj.dataFimInscricao);
-  obj.dataProva = formatar(obj.dataProva);
-  obj.createdAt = formatar(obj.createdAt);
-  obj.updatedAt = formatar(obj.updatedAt);
-
-  return obj;
-};
-
-// Exporta o model para uso em controllers
+// Exportar model
 export default mongoose.model("Concurso", ConcursoSchema);

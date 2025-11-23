@@ -1,41 +1,90 @@
+// src/routes/inscricaoRoutes.js
+// Rotas responsáveis pela criação e gestão das inscrições
+
 import express from "express";
+import { autenticar } from "../middlewares/authMiddleware.js";
+import {verificarAdmin} from "../middlewares/verificarAdmin.js"
+import { uploadFotoCandidato } from "../middlewares/uploadFotoCandidato.js";
+
 import {
   criarInscricao,
   listarInscricoes,
+  listarMinhasInscricoes,
   buscarInscricaoPorId,
   atualizarInscricao,
   deletarInscricao,
-  downloadFoto
+  downloadFoto,
 } from "../controllers/inscricaoController.js";
-
-import { upload } from "../middlewares/upload.js";
-import { autenticar } from "../middlewares/authMiddleware.js";
-import { verificarAdmin } from "../middlewares/verificarAdmin.js";
 
 const router = express.Router();
 
 /*
-|---------------------------------------------------------------------
-| ROTAS DE INSCRIÇÃO
-|---------------------------------------------------------------------
+|--------------------------------------------------------------------------
+| 📌 ROTAS DO CANDIDATO
+|--------------------------------------------------------------------------
 */
 
-// Criar inscrição (pública) + upload da foto
-router.post("/", upload.single("foto"), criarInscricao);
+/*
+|---------------------------------------------------------
+| Criar inscrição
+| - Apenas candidato logado
+| - Envia foto 3x4
+|---------------------------------------------------------
+*/
+router.post(
+  "/",
+  autenticar,                        // precisa estar logado
+  uploadFotoCandidato.single("foto"), // upload da foto
+  criarInscricao
+);
 
-// Listar todas as inscrições (somente ADMIN)
+/*
+|---------------------------------------------------------
+| Listar inscrições do candidato logado
+|---------------------------------------------------------
+*/
+router.get("/minhas", autenticar, listarMinhasInscricoes);
+
+/*
+|--------------------------------------------------------------------------
+| 📌 ROTAS DO ADMIN
+|-------------------------------------------------------------------------- 
+*/
+
+/*
+|---------------------------------------------------------
+| Listar todas as inscrições
+|---------------------------------------------------------
+*/
 router.get("/", autenticar, verificarAdmin, listarInscricoes);
 
-// Download da foto do candidato (somente ADMIN)
-router.get("/:id/foto", autenticar, verificarAdmin, downloadFoto);
+/*
+|---------------------------------------------------------
+| Download da foto do candidato
+| ⚠ Importante: essa rota deve vir ANTES de "/:id"
+|---------------------------------------------------------
+*/
+router.get("/foto/:id", autenticar, verificarAdmin, downloadFoto);
 
-// Buscar inscrição por ID (somente ADMIN)
+/*
+|---------------------------------------------------------
+| Buscar inscrição por ID
+|---------------------------------------------------------
+*/
 router.get("/:id", autenticar, verificarAdmin, buscarInscricaoPorId);
 
-// Atualizar inscrição (somente ADMIN)
-router.put("/:id", autenticar, verificarAdmin, upload.single("foto"), atualizarInscricao);
+/*
+|---------------------------------------------------------
+| Atualizar inscrição
+|---------------------------------------------------------
+*/
+router.put("/:id", autenticar, verificarAdmin, atualizarInscricao);
 
-// Deletar inscrição (somente ADMIN)
+/*
+|---------------------------------------------------------
+| Deletar inscrição
+|---------------------------------------------------------
+*/
 router.delete("/:id", autenticar, verificarAdmin, deletarInscricao);
 
 export default router;

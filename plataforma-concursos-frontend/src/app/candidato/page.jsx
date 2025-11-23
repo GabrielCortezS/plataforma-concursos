@@ -59,7 +59,7 @@ export default function AreaDoCandidato() {
 
           {/* 🔹 Atualizar Dados (iremos fazer mais pra frente) */}
           <Link
-            href="/candidato/perfil"
+            href="/candidato/meus-dados"
             className="p-6 border rounded-lg shadow hover:shadow-lg transition bg-white"
           >
             <h2 className="text-xl font-semibold mb-2">Meus Dados</h2>

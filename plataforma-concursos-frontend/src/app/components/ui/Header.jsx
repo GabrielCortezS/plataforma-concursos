@@ -10,7 +10,7 @@ import { colors } from "@/app/styles/tokens";
 export default function Header() {
   const [open, setOpen] = useState(false);
 
-  // 🔹 Estado para controlar se o candidato está logado
+  // 🔹 Estado para saber se o candidato está logado
   const [isLogged, setIsLogged] = useState(false);
 
   const router = useRouter();
@@ -18,14 +18,12 @@ export default function Header() {
   /*
   |---------------------------------------------------------
   | 🔍 Verifica se existe token no navegador (login ativo)
-  | - Isola a lógica em uma função para evitar warnings
-  | - Executa apenas uma vez ao carregar o Header
   |---------------------------------------------------------
   */
   useEffect(() => {
     const checkLogin = () => {
       const token = localStorage.getItem("token");
-      setIsLogged(!!token); // true se houver token
+      setIsLogged(!!token);
     };
 
     checkLogin();
@@ -33,10 +31,7 @@ export default function Header() {
 
   /*
   |---------------------------------------------------------
-  | 🔐 Logout
-  | - Remove o token
-  | - Atualiza o estado da UI
-  | - Redireciona para a Home
+  | 🔐 Logout — remove token e redireciona
   |---------------------------------------------------------
   */
   const handleLogout = () => {
@@ -52,7 +47,7 @@ export default function Header() {
     >
       <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
 
-        {/* 🔹 LOGO — volta para a Home */}
+        {/* 🔹 LOGO — Home */}
         <Link href="/" className="flex items-center gap-3">
           <Image
             src="/inepas-logo.svg"
@@ -78,7 +73,17 @@ export default function Header() {
             Contato
           </Link>
 
-          {/* 🔹 Login / Logout condicional */}
+          {/* 🔹 Link exclusivo para candidatos logados */}
+          {isLogged && (
+            <Link
+              href="/candidato"
+              className="hover:text-blue-900 transition font-medium"
+            >
+              Área do Candidato
+            </Link>
+          )}
+
+          {/* 🔹 Login / Logout */}
           {isLogged ? (
             <button
               onClick={handleLogout}
@@ -96,7 +101,7 @@ export default function Header() {
           )}
         </nav>
 
-        {/* 🔹 BOTÃO HAMBÚRGUER — MOBILE */}
+        {/* 🔹 HAMBURGUER MOBILE */}
         <button className="md:hidden text-3xl" onClick={() => setOpen(!open)}>
           {open ? "✖" : "☰"}
         </button>
@@ -117,6 +122,17 @@ export default function Header() {
           <Link href="/contato" className="text-gray-700 hover:text-blue-900">
             Contato
           </Link>
+
+          {/* 🔹 Área do Candidato — somente logado */}
+          {isLogged && (
+            <Link
+              href="/candidato"
+              className="text-gray-700 hover:text-blue-900"
+              onClick={() => setOpen(false)}
+            >
+              Área do Candidato
+            </Link>
+          )}
 
           {/* 🔹 Login / Logout (mobile) */}
           {isLogged ? (
