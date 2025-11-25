@@ -7,10 +7,10 @@ import { Button } from "../../components/ui/Button";
 
 /*
 |--------------------------------------------------------------------------
-| 📌 Página: Meus Dados (Área do Candidato)
-| - Mostra dados pessoais do candidato logado
-| - Mostra dados da inscrição vinculada (se houver)
-| - Permite ir para a tela de atualização da inscrição
+| 📌 Página: Meus Dados (Candidato)
+| - Exibe dados pessoais do candidato logado
+| - Exibe informações da inscrição vinculada
+| - Permite baixar o comprovante da inscrição (PDF)
 |--------------------------------------------------------------------------
 */
 
@@ -19,12 +19,13 @@ export default function MeusDadosPage() {
   const [inscricao, setInscricao] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // 🔐 Token salvo no navegador
-  const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+  // 🔐 Token armazenado no navegador
+  const token =
+    typeof window !== "undefined" ? localStorage.getItem("token") : null;
 
   /*
   |--------------------------------------------------------------------------
-  | 🔍 Buscar dados do candidato logado + inscrição
+  | 🔍 Buscar dados do candidato + inscrição vinculada
   |--------------------------------------------------------------------------
   */
   useEffect(() => {
@@ -37,9 +38,9 @@ export default function MeusDadosPage() {
         });
 
         const data = await res.json();
+
         setCandidato(data.candidato || null);
         setInscricao(data.inscricao || null);
-
       } catch (error) {
         console.error("Erro ao carregar dados:", error);
       } finally {
@@ -61,7 +62,7 @@ export default function MeusDadosPage() {
 
   /*
   |--------------------------------------------------------------------------
-  | ❌ Caso não encontre candidato ou erro no backend
+  | ❌ Erro ao carregar dados
   |--------------------------------------------------------------------------
   */
   if (!candidato) {
@@ -74,7 +75,7 @@ export default function MeusDadosPage() {
 
   /*
   |--------------------------------------------------------------------------
-  | 🎨 Interface principal
+  | 🎨 Interface Principal
   |--------------------------------------------------------------------------
   */
   return (
@@ -82,7 +83,6 @@ export default function MeusDadosPage() {
       <Header />
 
       <main className="flex-1 max-w-3xl mx-auto px-6 py-12">
-        
         {/* 🔵 Título */}
         <h1 className="text-3xl font-bold mb-8 text-center">Meus Dados</h1>
 
@@ -90,9 +90,15 @@ export default function MeusDadosPage() {
         <section className="bg-gray-100 p-6 rounded shadow mb-10">
           <h2 className="text-xl font-semibold mb-4">Dados do Candidato</h2>
 
-          <p><strong>Nome:</strong> {candidato.nome}</p>
-          <p><strong>E-mail:</strong> {candidato.email}</p>
-          <p><strong>CPF:</strong> {candidato.cpf || "Não informado"}</p>
+          <p>
+            <strong>Nome:</strong> {candidato.nome}
+          </p>
+          <p>
+            <strong>E-mail:</strong> {candidato.email}
+          </p>
+          <p>
+            <strong>CPF:</strong> {candidato.cpf || "Não informado"}
+          </p>
 
           <p className="mt-2">
             <strong>Data de Cadastro:</strong>{" "}
@@ -110,11 +116,10 @@ export default function MeusDadosPage() {
             <>
               {/* Concurso */}
               <p>
-                <strong>Concurso:</strong>{" "}
-                {inscricao.concursoId?.titulo || "—"}
+                <strong>Concurso:</strong> {inscricao.concursoId?.titulo || "—"}
               </p>
 
-              {/* Cargo — CAMPO CORRIGIDO */}
+              {/* Cargo */}
               <p>
                 <strong>Cargo:</strong>{" "}
                 {inscricao.cargoId?.nome ?? "Não informado"}
@@ -128,7 +133,7 @@ export default function MeusDadosPage() {
                 </span>
               </p>
 
-              {/* Foto */}
+              {/* Foto enviada */}
               {inscricao.foto && (
                 <div className="mt-4">
                   <strong>Foto enviada:</strong>
@@ -140,15 +145,50 @@ export default function MeusDadosPage() {
                 </div>
               )}
 
-              {/* Botão de ação */}
+              {/* 
+              --------------------------------------------------------------------------
+              | 📄 Botão para baixar comprovante da inscrição
+              | - Agora é o único botão disponível
+              --------------------------------------------------------------------------
+              */}
               <Button
-                onClick={() => {
-                  window.location.href = `/candidato/editar-inscricao/${inscricao._id}`;
-                }}
-                className="mt-6 w-full bg-[#0b2c55] text-white py-3"
-              >
-                Atualizar Dados da Inscrição
-              </Button>
+  className="mt-6 w-full bg-green-600 text-white py-3"
+  onClick={async () => {
+    try {
+      const res = await fetch(
+        `http://localhost:5000/api/inscricoes/comprovante/${inscricao._id}`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
+      );
+
+      if (!res.ok) {
+        alert("Erro ao baixar comprovante.");
+        return;
+      }
+
+      // Recebe PDF como blob
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+
+      // Cria download
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `comprovante_${inscricao._id}.pdf`;
+      a.click();
+
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Erro no download:", error);
+      alert("Não foi possível baixar o comprovante.");
+    }
+  }}
+>
+  Baixar Comprovante de Inscrição
+</Button>
             </>
           )}
         </section>

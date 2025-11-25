@@ -69,9 +69,11 @@ export default function Header() {
             Editais
           </Link>
 
+          {/* 
           <Link href="/contato" className="hover:text-blue-900 transition">
             Contato
           </Link>
+          */}
 
           {/* 🔹 Link exclusivo para candidatos logados */}
           {isLogged && (
@@ -119,9 +121,11 @@ export default function Header() {
             Editais
           </Link>
 
+          {/*
           <Link href="/contato" className="text-gray-700 hover:text-blue-900">
             Contato
           </Link>
+         */}
 
           {/* 🔹 Área do Candidato — somente logado */}
           {isLogged && (
