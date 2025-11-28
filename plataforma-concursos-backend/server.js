@@ -11,6 +11,7 @@ import inscricaoRoutes from "./src/routes/inscricaoRoutes.js";
 import candidatoAuthRoutes from "./src/routes/candidatoAuthRoutes.js";
 import candidatoRoutes from "./src/routes/candidatoRoutes.js";
 import contatoRoutes from "./src/routes/contatoRoutes.js";
+import pagamentoRoutes from "./src/routes/pagamentoRoutes.js";
 
 // Configura o uso das variáveis de ambiente
 dotenv.config();
@@ -30,6 +31,8 @@ app.use("/api/candidato", candidatoAuthRoutes);
 app.use("/comprovantes", express.static("comprovantes"));
 app.use("/api/candidato", candidatoRoutes);
 app.use("/api/contato", contatoRoutes);
+app.use("/api/pagamentos", pagamentoRoutes);
+
 
 // Permitir acesso à pasta uploads
 app.use("/uploads", express.static("uploads"));

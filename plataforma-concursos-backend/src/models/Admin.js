@@ -1,49 +1,56 @@
+// src/models/Admin.js
+// Model do Administrador
+
 import mongoose from "mongoose";
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs"; // 🔥 CORRETO (bcryptjs)
 
-
-// Define o esquema (estrutura) do admnistrador
-
+// Estrutura do Administrador
 const AdminSchema = new mongoose.Schema(
     {
-        nome:{
+        nome: {
             type: String,
-            required: true,
-            unique: true, // garante que não existam emails duplicados
+            required: true
         },
 
-        email:{
+        email: {
             type: String,
             required: true,
+            unique: true // 🔥 EMAIL deve ser único
         },
-        
+
         senha: {
-            type:String,
-        required: true,
-        },
+            type: String,
+            required: true
+        }
     },
-    {timestamps:true} // cria automaticamente createdAt e updateAt
-
+    {
+        timestamps: true // cria createdAt / updatedAt automaticamente
+    }
 );
 
-// antes de salvar no banco, criptografa a senha
-
-AdminSchema.pre("save", async function(next) {
+/*
+|--------------------------------------------------------------------------
+| 🔐 Antes de salvar → criptografar senha automaticamente
+|--------------------------------------------------------------------------
+*/
+AdminSchema.pre("save", async function (next) {
+    // Se a senha não foi alterada, continuar
     if (!this.isModified("senha")) return next();
+
+    // Gerar hash
     const salt = await bcrypt.genSalt(10);
     this.senha = await bcrypt.hash(this.senha, salt);
+
     next();
 });
 
-// Metodo para comparar senhas no login
-
-AdminSchema.methods.compararSenha = async function (senhaDigitada){
-    return await bcrypt.compare(senhaDigitada, this.senha);
-
+/*
+|--------------------------------------------------------------------------
+| 🔑 Método do Model para comparar a senha no login
+|--------------------------------------------------------------------------
+*/
+AdminSchema.methods.compararSenha = function (senhaDigitada) {
+    return bcrypt.compare(senhaDigitada, this.senha);
 };
 
-// Exporta o modelo para uso em controllers
-
 export default mongoose.model("Admin", AdminSchema);
-
-

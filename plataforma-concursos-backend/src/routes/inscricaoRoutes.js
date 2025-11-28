@@ -1,5 +1,5 @@
 // src/routes/inscricaoRoutes.js
-// Rotas responsáveis pela criação e gestão das inscrições
+// Rotas responsáveis pela gestão completa das inscrições
 
 import express from "express";
 import { autenticar } from "../middlewares/authMiddleware.js";
@@ -15,7 +15,7 @@ import {
   buscarInscricaoDoCandidato,
   deletarInscricao,
   downloadFoto,
-  downloadComprovanteCandidato
+  downloadComprovanteCandidato,
 } from "../controllers/inscricaoController.js";
 
 const router = express.Router();
@@ -28,7 +28,7 @@ const router = express.Router();
 
 /*
 |---------------------------------------------------------
-| Criar nova inscrição
+| 🟩 Criar nova inscrição
 |---------------------------------------------------------
 */
 router.post(
@@ -40,30 +40,28 @@ router.post(
 
 /*
 |---------------------------------------------------------
-| Listar inscrições do candidato logado
+| 🟦 Listar inscrições do candidato logado
 |---------------------------------------------------------
 */
 router.get("/minhas", autenticar, listarMinhasInscricoes);
 
 /*
 |---------------------------------------------------------
-| Buscar UMA inscrição específica do candidato
-| - utilizada para saber dados da própria inscrição
+| 🟦 Buscar uma inscrição específica do candidato
 |---------------------------------------------------------
 */
 router.get("/minha/:id", autenticar, buscarInscricaoDoCandidato);
 
 /*
-|--------------------------------------------------------------------------
-| 📄 DOWNLOAD DO COMPROVANTE – CANDIDATO
-|--------------------------------------------------------------------------
+|---------------------------------------------------------
+| 📄 Download do comprovante (candidato)
+|---------------------------------------------------------
 */
 router.get(
   "/comprovante/:id",
   autenticar,
   downloadComprovanteCandidato
 );
-
 
 /*
 |--------------------------------------------------------------------------
@@ -73,28 +71,28 @@ router.get(
 
 /*
 |---------------------------------------------------------
-| Listar TODAS as inscrições
+| 🟩 Listar TODAS as inscrições
 |---------------------------------------------------------
 */
 router.get("/", autenticar, verificarAdmin, listarInscricoes);
 
 /*
 |---------------------------------------------------------
-| Download da foto enviada pelo candidato
+| 🟩 Download da foto enviada pelo candidato
 |---------------------------------------------------------
 */
 router.get("/foto/:id", autenticar, verificarAdmin, downloadFoto);
 
 /*
 |---------------------------------------------------------
-| Buscar inscrição por ID (Admin)
+| 🟩 Buscar inscrição por ID (Admin)
 |---------------------------------------------------------
 */
 router.get("/:id", autenticar, verificarAdmin, buscarInscricaoPorId);
 
 /*
 |---------------------------------------------------------
-| Atualizar inscrição (Admin)
+| 🟦 Atualizar inscrição (Admin)
 |---------------------------------------------------------
 */
 router.put(
@@ -107,7 +105,7 @@ router.put(
 
 /*
 |---------------------------------------------------------
-| Deletar inscrição (Admin)
+| 🟥 Deletar inscrição (Admin)
 |---------------------------------------------------------
 */
 router.delete("/:id", autenticar, verificarAdmin, deletarInscricao);

@@ -58,7 +58,6 @@ export default function InscricaoPage() {
     const token = localStorage.getItem("token");
 
     if (!token) {
-      // Guarda a página atual para redirecionar após login
       localStorage.setItem("redirectTo", `/candidato/inscricao/${concursoId}`);
       router.push("/candidato/login");
     }
@@ -77,7 +76,6 @@ export default function InscricaoPage() {
       try {
         setCarregando(true);
 
-        // 🔵 Buscar concurso
         const resConcurso = await fetch(
           `http://localhost:5000/api/concursos/${concursoId}`,
           { headers: { Authorization: `Bearer ${token}` } }
@@ -91,7 +89,6 @@ export default function InscricaoPage() {
         }
         setConcurso(dadosConcurso);
 
-        // 🔵 Buscar cargos filtrados do concurso
         const resCargos = await fetch(
           `http://localhost:5000/api/cargos/concurso/${concursoId}`,
           { headers: { Authorization: `Bearer ${token}` } }
@@ -130,7 +127,7 @@ export default function InscricaoPage() {
 
   /*
   |---------------------------------------------------------
-  | 💾 ENVIAR INSCRIÇÃO
+  | 💾 ENVIAR INSCRIÇÃO (CORRIGIDO)
   |---------------------------------------------------------
   */
   const handleSubmit = async (event) => {
@@ -138,7 +135,6 @@ export default function InscricaoPage() {
     setErro("");
     setSucesso("");
 
-    // 🔎 Validações básicas
     if (!cargoId) return setErro("Selecione um cargo.");
     if (!concordaTermos) return setErro("Você deve concordar com os termos.");
     if (!fotoFile) return setErro("Envie uma foto 3x4.");
@@ -149,19 +145,17 @@ export default function InscricaoPage() {
 
       const formData = new FormData();
 
-      // Dados enviados ao backend
+      /*
+      |--------------------------------------------------------------------------
+      | ✔ SOMENTE CAMPOS EXISTENTES NO BACKEND
+      |--------------------------------------------------------------------------
+      */
       formData.append("concursoId", concursoId);
       formData.append("cargoId", cargoId);
       formData.append("nomeCompleto", nomeCompleto);
       formData.append("cpf", cpf);
-      formData.append("rg", rg);
-      formData.append("dataNascimento", dataNascimento);
       formData.append("email", email);
       formData.append("telefone", telefone);
-      formData.append("endereco", endereco);
-      formData.append("cidade", cidade);
-      formData.append("uf", uf);
-      formData.append("cep", cep);
       formData.append("concordaTermos", concordaTermos ? "true" : "false");
       formData.append("foto", fotoFile);
 
@@ -177,19 +171,12 @@ export default function InscricaoPage() {
         throw new Error(data.mensagem || "Erro ao realizar inscrição.");
       }
 
-      // ✔ Exibe mensagem rápida
       setSucesso("Inscrição realizada com sucesso!");
 
-      /*
-      |---------------------------------------------------------
-      | 🔥 SALVA O COMPROVANTE PARA A TELA DE SUCESSO
-      |---------------------------------------------------------
-      */
       if (data.comprovanteUrl) {
         localStorage.setItem("comprovantePdf", data.comprovanteUrl);
       }
 
-      // ⏳ Redireciona após 800ms
       setTimeout(() => {
         router.push("/candidato/inscricao/sucesso");
       }, 800);
@@ -282,7 +269,6 @@ export default function InscricaoPage() {
                 className="w-full border px-4 py-2 rounded-md"
                 value={rg}
                 onChange={(e) => setRg(e.target.value)}
-                required
               />
             </div>
 
@@ -293,7 +279,6 @@ export default function InscricaoPage() {
                 className="w-full border px-4 py-2 rounded-md"
                 value={dataNascimento}
                 onChange={(e) => setDataNascimento(e.target.value)}
-                required
               />
             </div>
 
@@ -366,7 +351,6 @@ export default function InscricaoPage() {
 
           {/* --- CARGO + FOTO --- */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
-            {/* SELECT DE CARGOS */}
             <div className="md:col-span-2">
               <label>Cargo pretendido</label>
               <select

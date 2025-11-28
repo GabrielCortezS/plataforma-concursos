@@ -10,6 +10,9 @@ import { gerarComprovanteInscricao } from "../utils/gerarComprovanteInscricao.js
 /*
 |--------------------------------------------------------------------------
 | 🟩 CRIAR INSCRIÇÃO (CANDIDATO)
+|--------------------------------------------------------------------------
+| - Impede inscrição duplicada no mesmo concurso
+| - Valida termos de uso
 | - Salva dados + foto
 | - Associa ao candidato autenticado
 | - Gera comprovante PDF automaticamente
@@ -17,28 +20,76 @@ import { gerarComprovanteInscricao } from "../utils/gerarComprovanteInscricao.js
 */
 export const criarInscricao = async (req, res) => {
   try {
+    const { concursoId } = req.body;
+    const candidatoId = req.usuario?.id; // Sempre vem do JWT
+
+    /*
+    |--------------------------------------------------------------------------
+    | 1) Validar autenticação do candidato
+    |--------------------------------------------------------------------------
+    */
+    if (!candidatoId) {
+      return res.status(401).json({
+        mensagem: "Candidato não autenticado.",
+      });
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | 2) Verificar se já existe inscrição para este concurso
+    |--------------------------------------------------------------------------
+    */
+    const inscricaoExistente = await Inscricao.findOne({
+      candidatoId,
+      concursoId,
+    });
+
+    if (inscricaoExistente) {
+      return res.status(400).json({
+        mensagem: "Você já possui uma inscrição neste concurso.",
+      });
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | 3) Validar campo 'concordaTermos'
+    | Aceita: true, "true", "on", 1, "1"
+    |--------------------------------------------------------------------------
+    */
     const {
       nomeCompleto,
       cpf,
       email,
       telefone,
-      concursoId,
       cargoId,
       concordaTermos,
     } = req.body;
 
-    if (!concordaTermos || concordaTermos === "false") {
+    const termosValidos =
+      concordaTermos === true ||
+      concordaTermos === "true" ||
+      concordaTermos === "on" ||
+      concordaTermos === 1 ||
+      concordaTermos === "1";
+
+    if (!termosValidos) {
       return res.status(400).json({
-        mensagem: "É necessário concordar com os termos para realizar a inscrição.",
+        mensagem:
+          "É necessário concordar com os termos para realizar a inscrição.",
       });
     }
+
+    /*
+    |--------------------------------------------------------------------------
+    | 4) Dados técnicos da inscrição
+    |--------------------------------------------------------------------------
+    */
+    const caminhoFoto = req.file ? req.file.path : null;
 
     const ipConcordancia =
       req.headers["x-forwarded-for"] || req.socket.remoteAddress;
 
     const userAgent = req.headers["user-agent"] || "desconhecido";
-
-    const caminhoFoto = req.file ? req.file.path : null;
 
     const anoAtual = new Date().getFullYear();
     const numeroSequencial = Math.floor(Math.random() * 999999)
@@ -47,6 +98,11 @@ export const criarInscricao = async (req, res) => {
 
     const numeroInscricao = `INEPAS-${anoAtual}-${numeroSequencial}`;
 
+    /*
+    |--------------------------------------------------------------------------
+    | 5) Criar inscrição
+    |--------------------------------------------------------------------------
+    */
     const novaInscricao = await Inscricao.create({
       nomeCompleto,
       cpf,
@@ -54,7 +110,7 @@ export const criarInscricao = async (req, res) => {
       telefone,
       concursoId,
       cargoId,
-      candidatoId: req.usuario?.id || null,
+      candidatoId,
       foto: caminhoFoto,
       concordaTermos: true,
       dataConcordancia: new Date(),
@@ -65,7 +121,7 @@ export const criarInscricao = async (req, res) => {
 
     /*
     |--------------------------------------------------------------------------
-    | GERAR COMPROVANTE PDF
+    | 6) Gerar comprovante PDF automaticamente
     |--------------------------------------------------------------------------
     */
     let caminhoComprovante = null;
@@ -86,6 +142,11 @@ export const criarInscricao = async (req, res) => {
       console.error("Erro ao gerar comprovante:", errorPdf.message);
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | 7) Retorno ao frontend
+    |--------------------------------------------------------------------------
+    */
     const baseUrl = process.env.BASE_URL || "http://localhost:5000";
 
     return res.status(201).json({
@@ -105,7 +166,7 @@ export const criarInscricao = async (req, res) => {
 
 /*
 |--------------------------------------------------------------------------
-| 🟩 LISTAR INSCRIÇÕES (ADMIN)
+| 🟩 LISTAR TODAS AS INSCRIÇÕES (ADMIN)
 |--------------------------------------------------------------------------
 */
 export const listarInscricoes = async (req, res) => {
@@ -194,6 +255,7 @@ export const atualizarInscricao = async (req, res) => {
       return res.status(404).json({ mensagem: "Inscrição não encontrada" });
     }
 
+    // Campos proibidos de edição
     const camposBloqueados = [
       "dataConcordancia",
       "ipConcordancia",
@@ -205,6 +267,7 @@ export const atualizarInscricao = async (req, res) => {
 
     camposBloqueados.forEach((campo) => delete req.body[campo]);
 
+    // Substituir foto, se enviada
     if (req.file) {
       if (inscricao.foto) deleteFile(inscricao.foto);
       req.body.foto = req.file.path;
