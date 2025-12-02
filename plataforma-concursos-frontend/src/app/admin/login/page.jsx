@@ -1,5 +1,17 @@
 "use client";
 
+/*
+|------------------------------------------------------------
+| 🟦 Tela de Login do Administrador
+|------------------------------------------------------------
+| Responsável por:
+| - Enviar e-mail e senha ao backend
+| - Receber token JWT + email + nome
+| - Salvar dados no localStorage
+| - Redirecionar para o painel admin
+|------------------------------------------------------------
+*/
+
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -23,9 +35,19 @@ export default function AdminLoginPage() {
 
     try {
       /*
-      |-----------------------------------------------
-      | 📌 REQUISIÇÃO CORRETA PARA O BACKEND
-      |-----------------------------------------------
+      |------------------------------------------------------------
+      | 📌 IMPORTANTE:
+      | A rota correta do backend é:
+      |   POST http://localhost:5000/api/auth/login
+      |
+      | Esta rota agora retorna:
+      | {
+      |   mensagem,
+      |   token,
+      |   email,
+      |   nome
+      | }
+      |------------------------------------------------------------
       */
       const response = await fetch("http://localhost:5000/api/auth/login", {
         method: "POST",
@@ -35,35 +57,59 @@ export default function AdminLoginPage() {
         body: JSON.stringify({ email, senha }),
       });
 
-      // Extrai JSON corretamente
       const data = await response.json();
 
+      /*
+      |------------------------------------------------------------
+      | ❌ ERRO DE LOGIN
+      |------------------------------------------------------------
+      */
       if (!response.ok) {
         setCarregando(false);
         return setErro(data.mensagem || "Credenciais inválidas.");
       }
 
       /*
-      |-----------------------------------------------
-      | 🔑 SALVAR TOKEN DE ADMIN
-      |-----------------------------------------------
+      |------------------------------------------------------------
+      | 🔑 SALVAR TOKEN DO ADMIN
+      |------------------------------------------------------------
       */
       localStorage.setItem("adminToken", data.token);
 
       /*
-      |-----------------------------------------------
-      | 🔁 REDIRECIONAR PARA A DASHBOARD
-      |-----------------------------------------------
+      |------------------------------------------------------------
+      | 💾 SALVAR EMAIL E NOME DO ADMIN
+      | Necessário para exibir no AdminHeader
+      |------------------------------------------------------------
+      */
+      if (data.email) {
+        localStorage.setItem("adminEmail", data.email);
+      }
+
+      if (data.nome) {
+        localStorage.setItem("adminNome", data.nome);
+      }
+
+      /*
+      |------------------------------------------------------------
+      | 🔁 REDIRECIONAR PARA O DASHBOARD
+      |------------------------------------------------------------
       */
       router.push("/admin/dashboard");
 
     } catch (error) {
+      console.error("Erro ao fazer login:", error);
       setErro("Erro ao conectar ao servidor.");
     } finally {
       setCarregando(false);
     }
   };
 
+  /*
+  |------------------------------------------------------------
+  | 🎨 Layout da tela de login
+  |------------------------------------------------------------
+  */
   return (
     <div className="flex flex-col min-h-screen items-center justify-center bg-gray-100 px-4">
       <div className="bg-white shadow-lg rounded-lg p-8 max-w-md w-full">
@@ -79,37 +125,42 @@ export default function AdminLoginPage() {
         )}
 
         <form onSubmit={handleLogin} className="space-y-4">
+
+          {/* CAMPO DE EMAIL */}
           <div>
             <label className="text-black block mb-1">E-mail</label>
             <input
               type="email"
               className="text-black w-full border px-3 py-2 rounded"
               value={email}
-              placeholder="admin@email.com"
+              placeholder="admin@inepas.org"
               onChange={(e) => setEmail(e.target.value)}
               required
             />
           </div>
 
+          {/* CAMPO DE SENHA */}
           <div>
             <label className="text-black block mb-1">Senha</label>
             <input
               type="password"
               className="text-black w-full border px-3 py-2 rounded"
               value={senha}
-              placeholder="Senha"
+              placeholder="Digite sua senha"
               onChange={(e) => setSenha(e.target.value)}
               required
             />
           </div>
 
+          {/* BOTÃO */}
           <button
             type="submit"
             disabled={carregando}
-            className="w-full bg-[#0b2c55] text-white py-2 rounded hover:bg-[#081c38]"
+            className="w-full bg-[#0b2c55] text-white py-2 rounded hover:bg-[#081c38] disabled:opacity-50"
           >
             {carregando ? "Entrando..." : "Entrar"}
           </button>
+
         </form>
       </div>
     </div>

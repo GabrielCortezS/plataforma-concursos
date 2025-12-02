@@ -1,3 +1,20 @@
+/*
+|------------------------------------------------------------
+| 📁 UPLOAD DE DOCUMENTOS DO CONCURSO (PDF + IMAGENS)
+|------------------------------------------------------------
+| - Aceita:
+|     🔹 "edital"  → PDF (1 arquivo)
+|     🔹 "imagens" → imagens (até 10 arquivos)
+|
+| - Cria pasta automaticamente
+| - Filtra tipos permitidos
+| - Gera nomes únicos
+|
+| Este middleware evita o erro:
+| MulterError: Unexpected field
+|------------------------------------------------------------
+*/
+
 import multer from "multer";
 import path from "path";
 import fs from "fs";
@@ -18,7 +35,9 @@ const storage = multer.diskStorage({
 
   filename: (req, file, cb) => {
     // 🔹 Gera nome único para evitar conflito de arquivos
-    const nomeArquivo = Date.now() + "-" + file.originalname;
+    const ext = path.extname(file.originalname);
+    const nomeArquivo = Date.now() + "-" + Math.round(Math.random() * 1e9) + ext;
+
     cb(null, nomeArquivo);
   }
 });
@@ -32,7 +51,6 @@ function fileFilter(req, file, cb) {
     "image/jpeg"
   ];
 
-  // Aceita apenas tipos permitidos
   if (tiposPermitidos.includes(file.mimetype)) {
     cb(null, true);
   } else {
@@ -40,8 +58,19 @@ function fileFilter(req, file, cb) {
   }
 }
 
-// 🚀 Exporta o middleware configurado
+/*
+|------------------------------------------------------------
+| 🚀 Configuração final do Multer
+|------------------------------------------------------------
+| ⚠️ Agora o Multer SABE que deve aceitar:
+| - "edital" (1 arquivo)
+| - "imagens" (vários arquivos)
+|------------------------------------------------------------
+*/
 export const uploadDocumentos = multer({
   storage,
   fileFilter
-});
+}).fields([
+  { name: "edital", maxCount: 1 },     // 📄 PDF obrigatório
+  { name: "imagens", maxCount: 10 }    // 🖼 imagens opcionais
+]);

@@ -27,9 +27,7 @@ const router = express.Router();
 */
 
 /*
-|---------------------------------------------------------
 | 🟩 Criar nova inscrição
-|---------------------------------------------------------
 */
 router.post(
   "/",
@@ -39,23 +37,17 @@ router.post(
 );
 
 /*
-|---------------------------------------------------------
 | 🟦 Listar inscrições do candidato logado
-|---------------------------------------------------------
 */
 router.get("/minhas", autenticar, listarMinhasInscricoes);
 
 /*
-|---------------------------------------------------------
-| 🟦 Buscar uma inscrição específica do candidato
-|---------------------------------------------------------
+| 🟦 Buscar uma inscrição específica do candidato logado
 */
 router.get("/minha/:id", autenticar, buscarInscricaoDoCandidato);
 
 /*
-|---------------------------------------------------------
 | 📄 Download do comprovante (candidato)
-|---------------------------------------------------------
 */
 router.get(
   "/comprovante/:id",
@@ -70,33 +62,43 @@ router.get(
 */
 
 /*
-|---------------------------------------------------------
-| 🟩 Listar TODAS as inscrições
-|---------------------------------------------------------
+| 🟩 Listar todas as inscrições (rota oficial para admin)
+| GET /api/inscricoes/admin
 */
-router.get("/", autenticar, verificarAdmin, listarInscricoes);
+router.get(
+  "/admin",
+  autenticar,
+  verificarAdmin,
+  listarInscricoes
+);
 
 /*
-|---------------------------------------------------------
 | 🟩 Download da foto enviada pelo candidato
-|---------------------------------------------------------
+| GET /api/inscricoes/foto/:id
 */
-router.get("/foto/:id", autenticar, verificarAdmin, downloadFoto);
+router.get(
+  "/foto/:id",
+  autenticar,
+  verificarAdmin,
+  downloadFoto
+);
 
 /*
-|---------------------------------------------------------
 | 🟩 Buscar inscrição por ID (Admin)
-|---------------------------------------------------------
+| GET /api/inscricoes/admin/:id
 */
-router.get("/:id", autenticar, verificarAdmin, buscarInscricaoPorId);
+router.get(
+  "/admin/:id",
+  autenticar,
+  verificarAdmin,
+  buscarInscricaoPorId
+);
 
 /*
-|---------------------------------------------------------
 | 🟦 Atualizar inscrição (Admin)
-|---------------------------------------------------------
 */
 router.put(
-  "/:id",
+  "/admin/:id",
   autenticar,
   verificarAdmin,
   uploadFotoCandidato.single("foto"),
@@ -104,10 +106,13 @@ router.put(
 );
 
 /*
-|---------------------------------------------------------
 | 🟥 Deletar inscrição (Admin)
-|---------------------------------------------------------
 */
-router.delete("/:id", autenticar, verificarAdmin, deletarInscricao);
+router.delete(
+  "/admin/:id",
+  autenticar,
+  verificarAdmin,
+  deletarInscricao
+);
 
 export default router;

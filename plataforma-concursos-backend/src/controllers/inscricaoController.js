@@ -168,6 +168,9 @@ export const criarInscricao = async (req, res) => {
 |--------------------------------------------------------------------------
 | 🟩 LISTAR TODAS AS INSCRIÇÕES (ADMIN)
 |--------------------------------------------------------------------------
+| Retorna SEMPRE um objeto no padrão:
+| { inscricoes: [...] }
+|--------------------------------------------------------------------------
 */
 export const listarInscricoes = async (req, res) => {
   try {
@@ -176,7 +179,7 @@ export const listarInscricoes = async (req, res) => {
       .populate("cargoId")
       .populate("candidatoId");
 
-    return res.json(inscricoes);
+    return res.json({ inscricoes });
   } catch (error) {
     return res.status(500).json({
       mensagem: "Erro ao listar inscrições",

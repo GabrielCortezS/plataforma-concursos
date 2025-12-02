@@ -16,50 +16,50 @@ import { uploadDocumentos } from "../middlewares/uploadDocumentos.js";
 const router = express.Router();
 
 /*
-|--------------------------------------------------------------------------
-| ADMIN — Criar concurso com upload de documentos
-|--------------------------------------------------------------------------
+|----------------------------------------------------------------------
+| ADMIN — Criar concurso (com PDF + imagens)
+|----------------------------------------------------------------------
 */
 router.post(
   "/",
   autenticar,
   verificarAdmin,
-  uploadDocumentos.array("documentos", 10),
+  uploadDocumentos, // ✔ agora correto
   criarConcurso
 );
 
 /*
-|--------------------------------------------------------------------------
-| PÚBLICO — Listar e ver detalhes de concursos
-|--------------------------------------------------------------------------
+|----------------------------------------------------------------------
+| PÚBLICO — Listagem e visualização
+|----------------------------------------------------------------------
 */
 router.get("/", listarConcursos);
 router.get("/:id", buscarConcursoPorId);
 
 /*
-|--------------------------------------------------------------------------
-| ADMIN — Atualizar concurso (troca documentos)
-|--------------------------------------------------------------------------
+|----------------------------------------------------------------------
+| ADMIN — Atualizar concurso (com novos arquivos)
+|----------------------------------------------------------------------
 */
 router.put(
   "/:id",
   autenticar,
   verificarAdmin,
-  uploadDocumentos.array("documentos", 10),
+  uploadDocumentos, // ✔ removeu .array()
   atualizarConcurso
 );
 
 /*
-|--------------------------------------------------------------------------
+|----------------------------------------------------------------------
 | ADMIN — Deletar concurso
-|--------------------------------------------------------------------------
+|----------------------------------------------------------------------
 */
 router.delete("/:id", autenticar, verificarAdmin, deletarConcurso);
 
 /*
-|--------------------------------------------------------------------------
-| Download de documentos do concurso (PDF, imagens)
-|--------------------------------------------------------------------------
+|----------------------------------------------------------------------
+| DOWNLOAD DE DOCUMENTOS (PDF/IMAGENS)
+|----------------------------------------------------------------------
 */
 router.get("/download/:arquivo", downloadDocumento);
 
