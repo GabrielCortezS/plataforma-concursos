@@ -1,8 +1,10 @@
-// controllers/cargoController.js
-// --------------------------------------------------------------
-// CONTROLLER DE CARGOS
-// Cada cargo pertence a um concurso (via concursoId)
-// --------------------------------------------------------------
+// ============================================================================
+// 📌 CONTROLLER DE CARGOS
+// Cada cargo pertence a um concurso (via campo concursoId)
+// Este arquivo contém CRUD completo + filtros
+// Todos os retornos foram padronizados para arrays diretos,
+// garantindo compatibilidade com o frontend.
+// ============================================================================
 
 import Cargo from "../models/Cargo.js";
 
@@ -10,19 +12,26 @@ import Cargo from "../models/Cargo.js";
 |--------------------------------------------------------------------------
 | 1) CRIAR NOVO CARGO
 |--------------------------------------------------------------------------
+| Recebe os dados via JSON e cria um cargo vinculado a um concurso.
+| req.body deve conter:
+|  - nome
+|  - vagas
+|  - salario
+|  - requisitos
+|  - concursoId
+|--------------------------------------------------------------------------
 */
 export const criarCargo = async (req, res) => {
   try {
-    // Cria cargo diretamente com os dados enviados
     const novoCargo = await Cargo.create(req.body);
 
-    res.status(201).json({
+    return res.status(201).json({
       mensagem: "Cargo criado com sucesso",
       novoCargo
     });
 
   } catch (error) {
-    res.status(500).json({
+    return res.status(500).json({
       mensagem: "Erro ao criar cargo",
       erro: error.message
     });
@@ -31,18 +40,21 @@ export const criarCargo = async (req, res) => {
 
 /*
 |--------------------------------------------------------------------------
-| 2) LISTAR TODOS OS CARGOS
+| 2) LISTAR TODOS OS CARGOS (CORRIGIDO)
+|--------------------------------------------------------------------------
+| Antes retornava { cargos: [...] }
+| Agora retorna diretamente o array: [...]
+| Isso corrige o problema da tela vazia no frontend.
 |--------------------------------------------------------------------------
 */
 export const listarCargos = async (req, res) => {
   try {
-    // Lista todos os cargos e popula o concurso vinculado
     const cargos = await Cargo.find().populate("concursoId");
 
-    res.json({ cargos });
+    return res.json(cargos); // ✔ Agora retornando array direto
 
   } catch (error) {
-    res.status(500).json({
+    return res.status(500).json({
       mensagem: "Erro ao listar cargos",
       erro: error.message
     });
@@ -51,17 +63,23 @@ export const listarCargos = async (req, res) => {
 
 /*
 |--------------------------------------------------------------------------
-| 3) LISTAR CARGO POR ID
+| 3) LISTAR CARGO POR ID (CORRIGIDO)
+|--------------------------------------------------------------------------
+| Retorna o cargo diretamente, não dentro de um objeto.
 |--------------------------------------------------------------------------
 */
 export const listarCargoById = async (req, res) => {
   try {
     const cargo = await Cargo.findById(req.params.id).populate("concursoId");
 
-    res.json({ cargo });
+    if (!cargo) {
+      return res.status(404).json({ mensagem: "Cargo não encontrado" });
+    }
+
+    return res.json(cargo); // ✔ retorna cargo direto
 
   } catch (error) {
-    res.status(500).json({
+    return res.status(500).json({
       mensagem: "Erro ao buscar cargo",
       erro: error.message
     });
@@ -70,20 +88,19 @@ export const listarCargoById = async (req, res) => {
 
 /*
 |--------------------------------------------------------------------------
-| 4) LISTAR CARGOS VINCULADOS A UM CONCURSO ESPECÍFICO
+| 4) LISTAR CARGOS DE UM CONCURSO ESPECÍFICO (CORRIGIDO)
 |--------------------------------------------------------------------------
-| Essa rota devolve APENAS os cargos do concurso informado
-| Isso evita filtros no front e garante dados consistentes
+| Retorna APENAS os cargos vinculados ao concurso informado.
+| Retorno = array direto.
 |--------------------------------------------------------------------------
 */
 export const listarCargosPorConcurso = async (req, res) => {
   try {
     const { concursoId } = req.params;
 
-    // Busca cargos cujo campo concursoId = concursoId fornecido
     const cargos = await Cargo.find({ concursoId }).populate("concursoId");
 
-    return res.json({ cargos });
+    return res.json(cargos); // ✔ retorna somente o array
 
   } catch (error) {
     return res.status(500).json({
@@ -97,6 +114,8 @@ export const listarCargosPorConcurso = async (req, res) => {
 |--------------------------------------------------------------------------
 | 5) ATUALIZAR CARGO
 |--------------------------------------------------------------------------
+| Atualiza campos específicos de um cargo.
+|--------------------------------------------------------------------------
 */
 export const atualizarCargo = async (req, res) => {
   try {
@@ -106,13 +125,17 @@ export const atualizarCargo = async (req, res) => {
       { new: true }
     );
 
-    res.json({
+    if (!cargoAtualizado) {
+      return res.status(404).json({ mensagem: "Cargo não encontrado" });
+    }
+
+    return res.json({
       mensagem: "Cargo atualizado com sucesso",
       cargoAtualizado
     });
 
   } catch (error) {
-    res.status(500).json({
+    return res.status(500).json({
       mensagem: "Erro ao atualizar cargo",
       erro: error.message
     });
@@ -123,17 +146,23 @@ export const atualizarCargo = async (req, res) => {
 |--------------------------------------------------------------------------
 | 6) DELETAR CARGO
 |--------------------------------------------------------------------------
+| Remove o cargo permanentemente.
+|--------------------------------------------------------------------------
 */
 export const deletarCargo = async (req, res) => {
   try {
-    await Cargo.findByIdAndDelete(req.params.id);
+    const deletado = await Cargo.findByIdAndDelete(req.params.id);
 
-    res.json({
+    if (!deletado) {
+      return res.status(404).json({ mensagem: "Cargo não encontrado" });
+    }
+
+    return res.json({
       mensagem: "Cargo deletado com sucesso"
     });
 
   } catch (error) {
-    res.status(500).json({
+    return res.status(500).json({
       mensagem: "Erro ao deletar cargo",
       erro: error.message
     });

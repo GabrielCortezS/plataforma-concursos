@@ -5,6 +5,12 @@
 | 🟦 Página: /admin/cargos/novo
 |------------------------------------------------------------
 | Permite criar um novo cargo vinculado a um concurso.
+| Campos compatíveis com o Model Cargo:
+|  - nome (String)
+|  - vagas (Number)
+|  - salario (Number)
+|  - requisitos (String)
+|  - concursoId (ObjectId)
 |------------------------------------------------------------
 */
 
@@ -14,18 +20,24 @@ import { useRouter } from "next/navigation";
 export default function NovoCargoPage() {
   const router = useRouter();
 
+  // Lista de concursos
   const [concursos, setConcursos] = useState([]);
+
+  // Campos do cargo
   const [nome, setNome] = useState("");
-  const [descricao, setDescricao] = useState("");
   const [vagas, setVagas] = useState("");
   const [salario, setSalario] = useState("");
-  const [nivel, setNivel] = useState("");
+  const [requisitos, setRequisitos] = useState("");
   const [concursoId, setConcursoId] = useState("");
 
   const [erro, setErro] = useState("");
   const [carregando, setCarregando] = useState(false);
 
-  // Buscar concursos para preencher o dropdown
+  /*
+  |------------------------------------------------------------
+  | 🔍 Buscar concursos para preencher o select
+  |------------------------------------------------------------
+  */
   const buscarConcursos = async () => {
     try {
       const token = localStorage.getItem("adminToken");
@@ -46,7 +58,11 @@ export default function NovoCargoPage() {
     buscarConcursos();
   }, []);
 
-  // Enviar formulário
+  /*
+  |------------------------------------------------------------
+  | 🟦 Enviar formulário
+  |------------------------------------------------------------
+  */
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErro("");
@@ -63,10 +79,9 @@ export default function NovoCargoPage() {
         },
         body: JSON.stringify({
           nome,
-          descricao,
-          vagas,
-          salario,
-          nivel,
+          vagas: Number(vagas),
+          salario: Number(salario),
+          requisitos,
           concursoId,
         }),
       });
@@ -86,6 +101,11 @@ export default function NovoCargoPage() {
     }
   };
 
+  /*
+  |------------------------------------------------------------
+  | Renderização
+  |------------------------------------------------------------
+  */
   return (
     <div className="p-6">
       <h1 className="text-lg font-semibold text-gray-800 mb-6">
@@ -104,7 +124,9 @@ export default function NovoCargoPage() {
       >
         {/* Nome */}
         <div>
-          <label className="block text-gray-700 text-sm mb-1">Nome do Cargo</label>
+          <label className="block text-gray-700 text-sm mb-1">
+            Nome do Cargo
+          </label>
           <input
             type="text"
             className="w-full border rounded p-2 text-sm text-black"
@@ -114,19 +136,21 @@ export default function NovoCargoPage() {
           />
         </div>
 
-        {/* Descrição */}
+        {/* Requisitos */}
         <div>
-          <label className="block text-gray-700 text-sm mb-1">Descrição</label>
+          <label className="block text-gray-700 text-sm mb-1">
+            Requisitos do Cargo
+          </label>
           <textarea
             className="w-full border rounded p-2 text-sm text-black h-24"
-            value={descricao}
-            onChange={(e) => setDescricao(e.target.value)}
+            value={requisitos}
+            onChange={(e) => setRequisitos(e.target.value)}
             required
           ></textarea>
         </div>
 
-        {/* Vagas + Salário + Nível */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Vagas + Salário */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-gray-700 text-sm mb-1">Vagas</label>
             <input
@@ -147,21 +171,6 @@ export default function NovoCargoPage() {
               onChange={(e) => setSalario(e.target.value)}
               required
             />
-          </div>
-
-          <div>
-            <label className="block text-gray-700 text-sm mb-1">Nível</label>
-            <select
-              className="w-full border rounded p-2 text-sm text-black"
-              value={nivel}
-              onChange={(e) => setNivel(e.target.value)}
-              required
-            >
-              <option value="">Selecione</option>
-              <option value="fundamental">Fundamental</option>
-              <option value="médio">Médio</option>
-              <option value="superior">Superior</option>
-            </select>
           </div>
         </div>
 

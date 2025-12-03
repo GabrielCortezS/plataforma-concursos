@@ -16,51 +16,73 @@ import { uploadDocumentos } from "../middlewares/uploadDocumentos.js";
 const router = express.Router();
 
 /*
-|----------------------------------------------------------------------
-| ADMIN — Criar concurso (com PDF + imagens)
-|----------------------------------------------------------------------
+|--------------------------------------------------------------------------
+| 🔵 ADMIN — Criar concurso (com upload de PDF + imagens)
+|--------------------------------------------------------------------------
+| - Apenas admins podem criar concursos
+| - UploadDocumentos gerencia anexos (PDF/imagens)
+| - multipart/form-data
+|--------------------------------------------------------------------------
 */
 router.post(
   "/",
   autenticar,
   verificarAdmin,
-  uploadDocumentos, // ✔ agora correto
+  uploadDocumentos,
   criarConcurso
 );
 
 /*
-|----------------------------------------------------------------------
-| PÚBLICO — Listagem e visualização
-|----------------------------------------------------------------------
+|--------------------------------------------------------------------------
+| 🟢 DOWNLOAD DE DOCUMENTOS (PDF/IMAGENS)
+|--------------------------------------------------------------------------
+| ⚠ IMPORTANTE: ESTA ROTA PRECISA VIR ANTES DE /:id
+| Caso contrário, "/download/arquivo.pdf" seria interpretado como ":id"
+|--------------------------------------------------------------------------
+*/
+router.get("/download/:arquivo", downloadDocumento);
+
+/*
+|--------------------------------------------------------------------------
+| 🌎 PÚBLICO — Listagem geral de concursos
+|--------------------------------------------------------------------------
 */
 router.get("/", listarConcursos);
+
+/*
+|--------------------------------------------------------------------------
+| 🌎 PÚBLICO — Buscar concurso por ID
+|--------------------------------------------------------------------------
+| OBS: rota deve vir ANTES dos métodos PUT/DELETE do mesmo path
+|--------------------------------------------------------------------------
+*/
 router.get("/:id", buscarConcursoPorId);
 
 /*
-|----------------------------------------------------------------------
-| ADMIN — Atualizar concurso (com novos arquivos)
-|----------------------------------------------------------------------
+|--------------------------------------------------------------------------
+| 🟡 ADMIN — Atualizar concurso
+|--------------------------------------------------------------------------
+| - Aceita novos documentos (opcional)
+| - Se houver documentos antigos, backend remove automaticamente
+| - multipart/form-data
+|--------------------------------------------------------------------------
 */
 router.put(
   "/:id",
   autenticar,
   verificarAdmin,
-  uploadDocumentos, // ✔ removeu .array()
+  uploadDocumentos,
   atualizarConcurso
 );
 
 /*
-|----------------------------------------------------------------------
-| ADMIN — Deletar concurso
-|----------------------------------------------------------------------
+|--------------------------------------------------------------------------
+| 🔴 ADMIN — Deletar concurso
+|--------------------------------------------------------------------------
+| - Remove concurso e documentos anexados
+| - Protegido por autenticação e tipo admin
+|--------------------------------------------------------------------------
 */
 router.delete("/:id", autenticar, verificarAdmin, deletarConcurso);
-
-/*
-|----------------------------------------------------------------------
-| DOWNLOAD DE DOCUMENTOS (PDF/IMAGENS)
-|----------------------------------------------------------------------
-*/
-router.get("/download/:arquivo", downloadDocumento);
 
 export default router;
