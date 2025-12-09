@@ -1,5 +1,26 @@
 "use client";
 
+/*
+|--------------------------------------------------------------------------
+| 📄 Tela: Lista de Inscrições — Painel Admin
+|--------------------------------------------------------------------------
+| - Mostra todas as inscrições cadastradas.
+| - A busca é feita pela rota oficial do backend:
+|     GET /api/inscricoes/admin
+|
+| - Apenas administradores logados (adminToken) podem acessar.
+| - Nesta tela exibimos:
+|     ✔ Candidato
+|     ✔ Concurso
+|     ✔ Cargo
+|     ✔ Status do pagamento
+|     ✔ Botão "Ver" (detalhes completos)
+|
+| - *Atenção:* Botões de baixar foto/comprovante agora ficam SOMENTE
+|   na página de detalhes, conforme sua solicitação.
+|--------------------------------------------------------------------------
+*/
+
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import Footer from "../../components/ui/Footer";
@@ -10,19 +31,7 @@ export default function AdminInscricoes() {
 
   /*
   |--------------------------------------------------------------------------
-  | 🔍 Carregar inscrições (ADMIN)
-  |--------------------------------------------------------------------------
-  | A rota oficial no backend para o administrador é:
-  | GET http://localhost:5000/api/inscricoes/admin
-  |
-  | Aqui buscamos todas as inscrições, incluindo:
-  | - dados do candidato
-  | - concurso selecionado
-  | - cargo escolhido
-  | - status de pagamento
-  |
-  | O adminToken garante que apenas administradores autenticados
-  | possam acessar esses dados.
+  | 🔄 Carregar lista de inscrições (ADMIN)
   |--------------------------------------------------------------------------
   */
   useEffect(() => {
@@ -31,14 +40,10 @@ export default function AdminInscricoes() {
         const token = localStorage.getItem("adminToken");
 
         const res = await fetch("http://localhost:5000/api/inscricoes/admin", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          headers: { Authorization: `Bearer ${token}` },
         });
 
         const data = await res.json();
-
-        // Garante que sempre trabalhamos com um array
         setInscricoes(data.inscricoes || []);
       } catch (error) {
         console.error("Erro ao carregar inscrições:", error);
@@ -50,38 +55,27 @@ export default function AdminInscricoes() {
     fetchInscricoes();
   }, []);
 
+  /*
+  |--------------------------------------------------------------------------
+  | ⏳ Tela de carregamento
+  |--------------------------------------------------------------------------
+  */
   if (loading) {
     return <p className="text-center mt-10">Carregando inscrições...</p>;
   }
 
+  /*
+  |--------------------------------------------------------------------------
+  | 🖥 Tela principal
+  |--------------------------------------------------------------------------
+  */
   return (
     <div className="flex flex-col min-h-screen bg-gray-100">
 
-      {/* 
-      |--------------------------------------------------------------------------
-      | 📌 CONTEÚDO PRINCIPAL DA TELA
-      |--------------------------------------------------------------------------
-      | Como já temos o Sidebar fixo no layout /admin/layout.jsx,
-      | aqui exibimos apenas o conteúdo da página.
-      |--------------------------------------------------------------------------
-      */}
+      {/* Conteúdo */}
       <main className="flex-1 p-8">
-
-        {/* Título da página */}
         <h1 className="text-black text-2xl font-bold mb-6">Inscrições</h1>
 
-        {/* 
-        |--------------------------------------------------------------------------
-        | 📋 Tabela de Inscrições
-        |--------------------------------------------------------------------------
-        | Exibe:
-        | - Nome do candidato
-        | - Concurso
-        | - Cargo
-        | - Status do pagamento
-        | - Ações (ver detalhes, foto e comprovante)
-        |--------------------------------------------------------------------------
-        */}
         <div className="overflow-x-auto bg-white shadow-md rounded-lg p-4">
           <table className="min-w-full">
             <thead>
@@ -101,10 +95,16 @@ export default function AdminInscricoes() {
                   className="text-black border-b hover:bg-gray-50"
                 >
                   <td className="py-3">{item.nomeCompleto}</td>
-                  <td className="py-3">{item.concursoId?.titulo}</td>
-                  <td className="py-3">{item.cargoId?.nome}</td>
 
-                  {/* Badge de pagamento */}
+                  <td className="py-3">
+                    {item.concursoId?.titulo || "—"}
+                  </td>
+
+                  <td className="py-3">
+                    {item.cargoId?.nome || "—"}
+                  </td>
+
+                  {/* Status do pagamento */}
                   <td className="py-3">
                     <span
                       className={`px-3 py-1 rounded text-white text-sm ${
@@ -117,34 +117,14 @@ export default function AdminInscricoes() {
                     </span>
                   </td>
 
-                  {/* Ações */}
-                  <td className="py-3 flex gap-4">
-
-                    {/* Ver detalhes da inscrição */}
+                  {/* ✔ Ações — Apenas botão "Ver" */}
+                  <td className="py-3">
                     <Link
                       href={`/admin/inscricoes/${item._id}`}
                       className="text-blue-600 hover:underline"
                     >
                       Ver
                     </Link>
-
-                    {/* Download da foto */}
-                    <a
-                      href={`http://localhost:5000/api/inscricoes/foto/${item._id}`}
-                      className="text-purple-600 hover:underline"
-                      target="_blank"
-                    >
-                      Foto
-                    </a>
-
-                    {/* Download do comprovante PDF */}
-                    <a
-                      href={`http://localhost:5000/api/inscricoes/comprovante/${item._id}`}
-                      className="text-orange-600 hover:underline"
-                      target="_blank"
-                    >
-                      Comprovante
-                    </a>
                   </td>
                 </tr>
               ))}
@@ -153,7 +133,7 @@ export default function AdminInscricoes() {
         </div>
       </main>
 
-      {/* Rodapé padrão do sistema */}
+      {/* Rodapé */}
       <Footer />
     </div>
   );

@@ -1,5 +1,13 @@
-// src/controllers/inscricaoController.js
-// Controlador responsável pela gestão completa das inscrições
+// ============================================================================
+// 📌 CONTROLLER DE INSCRIÇÕES
+// Gerencia:
+// - criação de inscrição
+// - listagem
+// - download de foto
+// - download de comprovantes
+// - atualização (admin)
+// - remoção (admin)
+// ============================================================================
 
 import Inscricao from "../models/Inscricao.js";
 import Concurso from "../models/Concurso.js";
@@ -11,34 +19,17 @@ import { gerarComprovanteInscricao } from "../utils/gerarComprovanteInscricao.js
 |--------------------------------------------------------------------------
 | 🟩 CRIAR INSCRIÇÃO (CANDIDATO)
 |--------------------------------------------------------------------------
-| - Impede inscrição duplicada no mesmo concurso
-| - Valida termos de uso
-| - Salva dados + foto
-| - Associa ao candidato autenticado
-| - Gera comprovante PDF automaticamente
-|--------------------------------------------------------------------------
 */
 export const criarInscricao = async (req, res) => {
   try {
     const { concursoId } = req.body;
-    const candidatoId = req.usuario?.id; // Sempre vem do JWT
+    const candidatoId = req.usuario?.id;
 
-    /*
-    |--------------------------------------------------------------------------
-    | 1) Validar autenticação do candidato
-    |--------------------------------------------------------------------------
-    */
     if (!candidatoId) {
-      return res.status(401).json({
-        mensagem: "Candidato não autenticado.",
-      });
+      return res.status(401).json({ mensagem: "Candidato não autenticado." });
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | 2) Verificar se já existe inscrição para este concurso
-    |--------------------------------------------------------------------------
-    */
+    // Impedir duplicidade de inscrição
     const inscricaoExistente = await Inscricao.findOne({
       candidatoId,
       concursoId,
@@ -50,20 +41,9 @@ export const criarInscricao = async (req, res) => {
       });
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | 3) Validar campo 'concordaTermos'
-    | Aceita: true, "true", "on", 1, "1"
-    |--------------------------------------------------------------------------
-    */
-    const {
-      nomeCompleto,
-      cpf,
-      email,
-      telefone,
-      cargoId,
-      concordaTermos,
-    } = req.body;
+    // Validar termos
+    const { nomeCompleto, cpf, email, telefone, cargoId, concordaTermos } =
+      req.body;
 
     const termosValidos =
       concordaTermos === true ||
@@ -74,21 +54,14 @@ export const criarInscricao = async (req, res) => {
 
     if (!termosValidos) {
       return res.status(400).json({
-        mensagem:
-          "É necessário concordar com os termos para realizar a inscrição.",
+        mensagem: "É necessário concordar com os termos para realizar a inscrição.",
       });
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | 4) Dados técnicos da inscrição
-    |--------------------------------------------------------------------------
-    */
+    // Informações técnicas
     const caminhoFoto = req.file ? req.file.path : null;
-
     const ipConcordancia =
       req.headers["x-forwarded-for"] || req.socket.remoteAddress;
-
     const userAgent = req.headers["user-agent"] || "desconhecido";
 
     const anoAtual = new Date().getFullYear();
@@ -98,11 +71,7 @@ export const criarInscricao = async (req, res) => {
 
     const numeroInscricao = `INEPAS-${anoAtual}-${numeroSequencial}`;
 
-    /*
-    |--------------------------------------------------------------------------
-    | 5) Criar inscrição
-    |--------------------------------------------------------------------------
-    */
+    // Criar inscrição
     const novaInscricao = await Inscricao.create({
       nomeCompleto,
       cpf,
@@ -119,11 +88,7 @@ export const criarInscricao = async (req, res) => {
       numeroInscricao,
     });
 
-    /*
-    |--------------------------------------------------------------------------
-    | 6) Gerar comprovante PDF automaticamente
-    |--------------------------------------------------------------------------
-    */
+    // Gerar comprovante PDF
     let caminhoComprovante = null;
 
     try {
@@ -142,11 +107,6 @@ export const criarInscricao = async (req, res) => {
       console.error("Erro ao gerar comprovante:", errorPdf.message);
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | 7) Retorno ao frontend
-    |--------------------------------------------------------------------------
-    */
     const baseUrl = process.env.BASE_URL || "http://localhost:5000";
 
     return res.status(201).json({
@@ -166,10 +126,7 @@ export const criarInscricao = async (req, res) => {
 
 /*
 |--------------------------------------------------------------------------
-| 🟩 LISTAR TODAS AS INSCRIÇÕES (ADMIN)
-|--------------------------------------------------------------------------
-| Retorna SEMPRE um objeto no padrão:
-| { inscricoes: [...] }
+| 🟦 LISTAR TODAS AS INSCRIÇÕES (ADMIN)
 |--------------------------------------------------------------------------
 */
 export const listarInscricoes = async (req, res) => {
@@ -190,7 +147,7 @@ export const listarInscricoes = async (req, res) => {
 
 /*
 |--------------------------------------------------------------------------
-| 🟩 DOWNLOAD FOTO DO CANDIDATO (ADMIN)
+| 🟦 DOWNLOAD FOTO (ADMIN)
 |--------------------------------------------------------------------------
 */
 export const downloadFoto = async (req, res) => {
@@ -199,13 +156,8 @@ export const downloadFoto = async (req, res) => {
 
     const inscricao = await Inscricao.findById(id);
 
-    if (!inscricao) {
-      return res.status(404).json({ mensagem: "Inscrição não encontrada" });
-    }
-
-    if (!inscricao.foto) {
-      return res.status(404).json({ mensagem: "Nenhuma foto enviada" });
-    }
+    if (!inscricao) return res.status(404).json({ mensagem: "Inscrição não encontrada" });
+    if (!inscricao.foto) return res.status(404).json({ mensagem: "Nenhuma foto enviada" });
 
     return res.sendFile(inscricao.foto, { root: "./" });
   } catch (error) {
@@ -218,7 +170,7 @@ export const downloadFoto = async (req, res) => {
 
 /*
 |--------------------------------------------------------------------------
-| 🟩 BUSCAR INSCRIÇÃO POR ID (ADMIN)
+| 🟦 BUSCAR INSCRIÇÃO POR ID (ADMIN)
 |--------------------------------------------------------------------------
 */
 export const buscarInscricaoPorId = async (req, res) => {
@@ -230,9 +182,8 @@ export const buscarInscricaoPorId = async (req, res) => {
       .populate("cargoId")
       .populate("candidatoId");
 
-    if (!inscricao) {
+    if (!inscricao)
       return res.status(404).json({ mensagem: "Inscrição não encontrada" });
-    }
 
     return res.json(inscricao);
   } catch (error) {
@@ -254,11 +205,9 @@ export const atualizarInscricao = async (req, res) => {
 
     const inscricao = await Inscricao.findById(id);
 
-    if (!inscricao) {
+    if (!inscricao)
       return res.status(404).json({ mensagem: "Inscrição não encontrada" });
-    }
 
-    // Campos proibidos de edição
     const camposBloqueados = [
       "dataConcordancia",
       "ipConcordancia",
@@ -268,9 +217,8 @@ export const atualizarInscricao = async (req, res) => {
       "candidatoId",
     ];
 
-    camposBloqueados.forEach((campo) => delete req.body[campo]);
+    camposBloqueados.forEach((c) => delete req.body[c]);
 
-    // Substituir foto, se enviada
     if (req.file) {
       if (inscricao.foto) deleteFile(inscricao.foto);
       req.body.foto = req.file.path;
@@ -294,7 +242,7 @@ export const atualizarInscricao = async (req, res) => {
 
 /*
 |--------------------------------------------------------------------------
-| 🟩 DELETAR INSCRIÇÃO (ADMIN)
+| 🟥 DELETAR INSCRIÇÃO (ADMIN)
 |--------------------------------------------------------------------------
 */
 export const deletarInscricao = async (req, res) => {
@@ -303,9 +251,8 @@ export const deletarInscricao = async (req, res) => {
 
     const inscricao = await Inscricao.findById(id);
 
-    if (!inscricao) {
+    if (!inscricao)
       return res.status(404).json({ mensagem: "Inscrição não encontrada" });
-    }
 
     if (inscricao.foto) deleteFile(inscricao.foto.replace(/\\/g, "/"));
 
@@ -329,9 +276,8 @@ export const listarMinhasInscricoes = async (req, res) => {
   try {
     const candidatoId = req.usuario?.id;
 
-    if (!candidatoId) {
+    if (!candidatoId)
       return res.status(401).json({ mensagem: "Candidato não autenticado" });
-    }
 
     const inscricoes = await Inscricao.find({ candidatoId })
       .populate("concursoId")
@@ -363,11 +309,10 @@ export const buscarInscricaoDoCandidato = async (req, res) => {
       .populate("concursoId")
       .populate("cargoId");
 
-    if (!inscricao) {
+    if (!inscricao)
       return res.status(404).json({
         mensagem: "Inscrição não encontrada ou não pertence a você.",
       });
-    }
 
     return res.json({ inscricao });
   } catch (error) {
@@ -393,22 +338,46 @@ export const downloadComprovanteCandidato = async (req, res) => {
       candidatoId,
     });
 
-    if (!inscricao) {
+    if (!inscricao)
       return res.status(404).json({
         mensagem: "Inscrição não encontrada ou não pertence a você.",
       });
-    }
 
-    if (!inscricao.comprovantePdf) {
+    if (!inscricao.comprovantePdf)
       return res.status(404).json({
         mensagem: "Nenhum comprovante gerado.",
       });
-    }
 
     return res.sendFile(inscricao.comprovantePdf, { root: "./" });
   } catch (error) {
     return res.status(500).json({
       mensagem: "Erro ao baixar comprovante",
+      erro: error.message,
+    });
+  }
+};
+
+/*
+|--------------------------------------------------------------------------
+| 📄 DOWNLOAD DO COMPROVANTE (ADMIN)
+|--------------------------------------------------------------------------
+*/
+export const downloadComprovanteAdmin = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const inscricao = await Inscricao.findById(id);
+
+    if (!inscricao)
+      return res.status(404).json({ mensagem: "Inscrição não encontrada" });
+
+    if (!inscricao.comprovantePdf)
+      return res.status(404).json({ mensagem: "Nenhum comprovante gerado." });
+
+    return res.sendFile(inscricao.comprovantePdf, { root: "./" });
+  } catch (error) {
+    return res.status(500).json({
+      mensagem: "Erro ao baixar comprovante (admin)",
       erro: error.message,
     });
   }

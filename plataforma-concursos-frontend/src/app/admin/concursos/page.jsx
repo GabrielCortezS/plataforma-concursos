@@ -4,6 +4,9 @@
 |------------------------------------------------------------
 | 🟦 Página: /admin/concursos
 |------------------------------------------------------------
+| Lista todos os concursos cadastrados.
+| Mostra título, data de início e status calculado no backend.
+|------------------------------------------------------------
 */
 
 import { useEffect, useState } from "react";
@@ -27,7 +30,10 @@ export default function AdminConcursosPage() {
 
       const data = await res.json();
 
-      if (!res.ok) return setErro(data.mensagem);
+      if (!res.ok) {
+        setErro(data.mensagem || "Erro ao carregar concursos.");
+        return;
+      }
 
       setConcursos(data);
     } catch (error) {
@@ -41,35 +47,9 @@ export default function AdminConcursosPage() {
     fetchConcursos();
   }, []);
 
-  // 🗑 Excluir concurso
-  const excluirConcurso = async (id) => {
-    if (!confirm("Tem certeza que deseja excluir este concurso?")) return;
-
-    try {
-      const token = localStorage.getItem("adminToken");
-
-      const res = await fetch(`http://localhost:5000/api/concursos/${id}`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) return alert(data.mensagem);
-
-      alert("Concurso excluído com sucesso!");
-      fetchConcursos();
-    } catch (error) {
-      alert("Erro ao conectar ao servidor.");
-    }
-  };
-
   // 🧩 Layout
   return (
     <div className="p-6">
-
       {/* Título + Botão */}
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-lg font-semibold text-gray-800">Concursos</h1>
@@ -115,15 +95,19 @@ export default function AdminConcursosPage() {
                 <tr key={conc._id} className="border-t hover:bg-gray-50">
                   <td className="px-4 py-3">{conc.titulo}</td>
 
-                  {/* 👇 Corrigido: usando dataInicioInscricao */}
+                  {/* 📅 Data de início (string YYYY-MM-DD → pt-BR) */}
                   <td className="px-4 py-3">
                     {conc.dataInicioInscricao
-                      ? new Date(conc.dataInicioInscricao + "T00:00:00")
-                          .toLocaleDateString("pt-BR")
+                      ? new Date(conc.dataInicioInscricao + "T00:00:00").toLocaleDateString(
+                          "pt-BR"
+                        )
                       : "-"}
                   </td>
 
-                  <td className="px-4 py-3">{conc.status || "aberto"}</td>
+                  {/* 🔄 Status já calculado no backend */}
+                  <td className="px-4 py-3 capitalize">
+                    {conc.status || "em breve"}
+                  </td>
 
                   <td className="px-4 py-3 space-x-3">
                     <Link
@@ -133,17 +117,11 @@ export default function AdminConcursosPage() {
                       Editar
                     </Link>
 
-                    <button
-                      className="text-red-600 hover:underline"
-                      onClick={() => excluirConcurso(conc._id)}
-                    >
-                      Excluir
-                    </button>
+                    {/* Exclusão poderia continuar aqui se você já tiver implementado */}
                   </td>
                 </tr>
               ))}
             </tbody>
-
           </table>
         </div>
       )}

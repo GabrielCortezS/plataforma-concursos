@@ -1,31 +1,20 @@
-// ============================================================================
-// 📄 CONCURSO CONTROLLER — VERSÃO PADRONIZADA E CORRIGIDA
-// ============================================================================
-// - Datas 100% compatíveis com o frontend (strings YYYY-MM-DD)
-// - Upload funciona com 1 OU vários arquivos
-// - Documentos antigos só são removidos quando realmente substituir
-// - Status pode ser calculado automaticamente (opcional)
-// - Totalmente alinhado ao Model e ao Front
-// ============================================================================
-
+// src/controllers/concursoController.js
 import Concurso from "../models/Concurso.js";
 import Cargo from "../models/Cargo.js";
 import fs from "fs";
 import path from "path";
 import { deleteFile } from "../utils/fileUtils.js";
 
-// ============================================================================
-// 1) CRIAR CONCURSO
-// ============================================================================
+/*
+|--------------------------------------------------------------------------
+| 1) CRIAR CONCURSO — Datas como STRING + Upload de documentos
+|--------------------------------------------------------------------------
+*/
 export const criarConcurso = async (req, res) => {
   try {
-    /*
-    |--------------------------------------------------------------------------
-    | 📎 Processar documentos enviados (1 ou vários)
-    |--------------------------------------------------------------------------
-    */
     const documentosProcessados = [];
 
+    // 📎 Processa arquivos enviados (se existirem)
     if (req.files && req.files.length > 0) {
       req.files.forEach((file) => {
         documentosProcessados.push({
@@ -37,25 +26,16 @@ export const criarConcurso = async (req, res) => {
       });
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | 🟦 Criar novo concurso
-    |--------------------------------------------------------------------------
-    */
+    // 🟦 Cria o concurso (datas são strings YYYY-MM-DD)
     const novoConcurso = await Concurso.create({
       titulo: req.body.titulo,
       orgao: req.body.orgao,
       edital: req.body.edital,
       descricao: req.body.descricao,
-
-      // Datas chegam como string do frontend
       dataInicioInscricao: req.body.dataInicioInscricao,
       dataFimInscricao: req.body.dataFimInscricao,
       dataProva: req.body.dataProva,
-
-      // Status pode vir do front ou calcularmos automaticamente
-      status: req.body.status ?? "em breve",
-
+      status: req.body.status,
       documentos: documentosProcessados,
     });
 
@@ -63,7 +43,6 @@ export const criarConcurso = async (req, res) => {
       mensagem: "Concurso criado com sucesso",
       novoConcurso,
     });
-
   } catch (error) {
     return res.status(500).json({
       mensagem: "Erro ao criar concurso",
@@ -72,14 +51,15 @@ export const criarConcurso = async (req, res) => {
   }
 };
 
-// ============================================================================
-// 2) LISTAR CONCURSOS (Público + Admin)
-// ============================================================================
+/*
+|--------------------------------------------------------------------------
+| 2) LISTAR CONCURSOS
+|--------------------------------------------------------------------------
+*/
 export const listarConcursos = async (req, res) => {
   try {
     const concursos = await Concurso.find().sort({ createdAt: -1 });
     return res.json(concursos);
-
   } catch (error) {
     return res.status(500).json({
       mensagem: "Erro ao listar concursos",
@@ -88,34 +68,14 @@ export const listarConcursos = async (req, res) => {
   }
 };
 
-// ============================================================================
-// 3) BUSCAR CONCURSO POR ID
-// ============================================================================
+/*
+|--------------------------------------------------------------------------
+| 3) BUSCAR CONCURSO POR ID
+|--------------------------------------------------------------------------
+*/
 export const buscarConcursoPorId = async (req, res) => {
   try {
-    const concurso = await Concurso.findById(req.params.id);
-
-    if (!concurso) {
-      return res.status(404).json({ mensagem: "Concurso não encontrado" });
-    }
-
-    return res.json(concurso);
-
-  } catch (error) {
-    return res.status(500).json({
-      mensagem: "Erro ao buscar concurso",
-      erro: error.message,
-    });
-  }
-};
-
-// ============================================================================
-// 4) ATUALIZAR CONCURSO
-// ============================================================================
-export const atualizarConcurso = async (req, res) => {
-  try {
     const { id } = req.params;
-
     const concurso = await Concurso.findById(id);
 
     if (!concurso) {
@@ -124,19 +84,57 @@ export const atualizarConcurso = async (req, res) => {
       });
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | 📎 Processar documentos enviados
-    | - Se enviar novos, apaga todos os antigos
-    | - Se não enviar, mantém os documentos existentes
-    |--------------------------------------------------------------------------
-    */
-    let documentosFinal = concurso.documentos;
+    return res.json(concurso);
+  } catch (error) {
+    return res.status(500).json({
+      mensagem: "Erro ao buscar concurso",
+      erro: error.message,
+    });
+  }
+};
 
+/*
+|--------------------------------------------------------------------------
+| 4) ATUALIZAR CONCURSO
+|    - Se não mandar arquivo: mantém documentos antigos
+|    - Se mandar novo(s) arquivo(s):
+|        • apaga arquivos antigos do disco (compatível com formato antigo)
+|        • salva apenas os novos
+|--------------------------------------------------------------------------
+*/
+export const atualizarConcurso = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // 🔍 Busca concurso existente
+    const concurso = await Concurso.findById(id);
+
+    if (!concurso) {
+      return res.status(404).json({
+        mensagem: "Concurso não encontrado",
+      });
+    }
+
+    let documentosFinal = concurso.documentos; // Mantém antigos por padrão
+
+    // 📎 Se arquivos novos foram enviados → REMOVER antigos + substituir
     if (req.files && req.files.length > 0) {
-      // 🔥 Apagar documentos antigos
-      concurso.documentos.forEach((doc) => deleteFile(doc.caminho));
+      // 🗑 Apaga arquivos antigos do servidor
+      if (concurso.documentos && concurso.documentos.length > 0) {
+        concurso.documentos.forEach((doc) => {
+          // 🔄 Compatibilidade:
+          // - formato antigo: doc = "uploads/documentos/arquivo.pdf"
+          // - formato novo:   doc = { nome, caminho, ... }
+          const caminhoAntigo =
+            typeof doc === "string" ? doc : doc?.caminho;
 
+          if (caminhoAntigo) {
+            deleteFile(caminhoAntigo);
+          }
+        });
+      }
+
+      // 🔄 Substitui pela nova lista (sempre no formato novo)
       documentosFinal = req.files.map((file) => ({
         nome: file.originalname,
         caminho: file.path.replace(/\\/g, "/"),
@@ -145,11 +143,7 @@ export const atualizarConcurso = async (req, res) => {
       }));
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | 🟦 Atualizar campos
-    |--------------------------------------------------------------------------
-    */
+    // 🟦 Atualizar campos (datas são strings)
     const concursoAtualizado = await Concurso.findByIdAndUpdate(
       id,
       {
@@ -160,15 +154,11 @@ export const atualizarConcurso = async (req, res) => {
 
         dataInicioInscricao:
           req.body.dataInicioInscricao ?? concurso.dataInicioInscricao,
-
         dataFimInscricao:
           req.body.dataFimInscricao ?? concurso.dataFimInscricao,
-
-        dataProva:
-          req.body.dataProva ?? concurso.dataProva,
+        dataProva: req.body.dataProva ?? concurso.dataProva,
 
         status: req.body.status ?? concurso.status,
-
         documentos: documentosFinal,
       },
       { new: true }
@@ -178,7 +168,6 @@ export const atualizarConcurso = async (req, res) => {
       mensagem: "Concurso atualizado com sucesso",
       concursoAtualizado,
     });
-
   } catch (error) {
     return res.status(500).json({
       mensagem: "Erro ao atualizar concurso",
@@ -187,31 +176,42 @@ export const atualizarConcurso = async (req, res) => {
   }
 };
 
-// ============================================================================
-// 5) DELETAR CONCURSO + documentos + cargos vinculados
-// ============================================================================
+/*
+|--------------------------------------------------------------------------
+| 5) DELETAR CONCURSO + documentos + cargos vinculados
+|--------------------------------------------------------------------------
+*/
 export const deletarConcurso = async (req, res) => {
   try {
     const { id } = req.params;
 
     const concurso = await Concurso.findById(id);
-
-    if (!concurso)
+    if (!concurso) {
       return res.status(404).json({ mensagem: "Concurso não encontrado" });
+    }
 
-    // Apaga documentos físicos
-    concurso.documentos.forEach((doc) => deleteFile(doc.caminho));
+    // 🗑 Remover documentos físicos (compatível com string ou objeto)
+    if (concurso.documentos && concurso.documentos.length > 0) {
+      concurso.documentos.forEach((doc) => {
+        const caminho =
+          typeof doc === "string" ? doc : doc?.caminho;
+        if (caminho) deleteFile(caminho);
+      });
+    }
 
-    // Apaga cargos vinculados
-    await Cargo.deleteMany({ concursoId: id });
+    // 🗑 Deletar cargos vinculados
+    const cargos = await Cargo.find({ concursoId: id });
+    for (const cargo of cargos) {
+      await Cargo.findByIdAndDelete(cargo._id);
+    }
 
-    // Apaga concurso
+    // 🗑 Remover concurso
     await Concurso.findByIdAndDelete(id);
 
     return res.json({
       mensagem: "Concurso e cargos vinculados deletados com sucesso",
+      cargosRemovidos: cargos.length,
     });
-
   } catch (error) {
     return res.status(500).json({
       mensagem: "Erro ao deletar concurso",
@@ -220,23 +220,26 @@ export const deletarConcurso = async (req, res) => {
   }
 };
 
-// ============================================================================
-// 6) DOWNLOAD DE DOCUMENTOS
-// ============================================================================
+/*
+|--------------------------------------------------------------------------
+| 6) DOWNLOAD DE DOCUMENTOS
+|    Compatível com:
+|      - /api/concursos/download/arquivo.pdf
+|--------------------------------------------------------------------------
+*/
 export const downloadDocumento = (req, res) => {
   try {
     const arquivo = req.params.arquivo;
 
-    const caminho = path
+    const caminhoArquivo = path
       .join("uploads/documentos", arquivo)
       .replace(/\\/g, "/");
 
-    if (!fs.existsSync(caminho)) {
-      return res.status(404).json({ mensagem: "Arquivo não encontrado" });
+    if (fs.existsSync(caminhoArquivo)) {
+      return res.download(caminhoArquivo);
     }
 
-    return res.download(caminho);
-
+    return res.status(404).json({ mensagem: "Arquivo não encontrado" });
   } catch (error) {
     return res.status(500).json({
       mensagem: "Erro ao realizar download",

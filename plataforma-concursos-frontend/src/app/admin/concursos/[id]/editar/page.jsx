@@ -1,189 +1,198 @@
 "use client";
 
 /*
-|------------------------------------------------------------
-| 🟦 Página: Editar Concurso
-|------------------------------------------------------------
-| Funções:
-| - Carregar dados do concurso via ID
-| - Preencher formulário automaticamente
-| - Enviar atualização (PUT multipart/form-data)
-| - Exibir documentos já enviados
-| - Substituir documentos apenas se enviar novos
-|------------------------------------------------------------
+|======================================================================
+| 🟦 Página: /admin/concursos/[id]/editar
+|-----------------------------------------------------------------------
+| - Carrega os dados do concurso pelo ID da URL
+| - Permite editar título, descrição e datas
+| - Exibe documentos já anexados
+| - Faz upload correto:
+|     🔹 "edital"  → PDF
+|     🔹 "imagens" → imagens
+| - Todos os textos ajustados para PRETO (text-black)
+|======================================================================
 */
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 
-export default function EditarConcurso() {
-  // Pega o :id da URL
+export default function EditarConcursoPage() {
   const { id } = useParams();
   const router = useRouter();
 
   const [concurso, setConcurso] = useState(null);
-  const [loading, setLoading] = useState(true);
 
-  /*
-  |------------------------------------------------------------
-  | Estados dos campos editáveis
-  |------------------------------------------------------------
-  */
+  // Campos de edição
   const [titulo, setTitulo] = useState("");
-  const [orgao, setOrgao] = useState("");
-  const [edital, setEdital] = useState("");
   const [descricao, setDescricao] = useState("");
-  const [dataInicio, setDataInicio] = useState("");
-  const [dataFim, setDataFim] = useState("");
+  const [dataInicioInscricao, setDataInicioInscricao] = useState("");
+  const [dataFimInscricao, setDataFimInscricao] = useState("");
   const [dataProva, setDataProva] = useState("");
 
+  // Upload
   const [novoDocumento, setNovoDocumento] = useState(null);
 
+  // Estados gerais
+  const [carregando, setCarregando] = useState(true);
+  const [salvando, setSalvando] = useState(false);
+  const [erro, setErro] = useState("");
+  const [sucesso, setSucesso] = useState("");
+
   /*
-  |------------------------------------------------------------
-  | 🔍 Buscar concurso pelo ID
-  |------------------------------------------------------------
+  |----------------------------------------------------------------------
+  | 🔍 Buscar concurso ao abrir página
+  |----------------------------------------------------------------------
   */
   useEffect(() => {
     if (!id) return;
 
-    async function fetchConcurso() {
+    const carregarConcurso = async () => {
       try {
         const token = localStorage.getItem("adminToken");
 
         const res = await fetch(`http://localhost:5000/api/concursos/${id}`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          headers: { Authorization: `Bearer ${token}` },
         });
 
         const data = await res.json();
 
+        if (!res.ok) {
+          setErro(data.mensagem || "Erro ao carregar concurso.");
+          return;
+        }
+
         setConcurso(data);
 
-        // Preenchendo os inputs
-        setTitulo(data.titulo ?? "");
-        setOrgao(data.orgao ?? "");
-        setEdital(data.edital ?? "");
-        setDescricao(data.descricao ?? "");
-
-        setDataInicio(data.dataInicioInscricao ?? "");
-        setDataFim(data.dataFimInscricao ?? "");
-        setDataProva(data.dataProva ?? "");
-
-      } catch (error) {
-        console.error("Erro ao carregar concurso:", error);
+        setTitulo(data.titulo || "");
+        setDescricao(data.descricao || "");
+        setDataInicioInscricao(data.dataInicioInscricao || "");
+        setDataFimInscricao(data.dataFimInscricao || "");
+        setDataProva(data.dataProva || "");
+      } catch (e) {
+        setErro("Erro ao conectar ao servidor.");
       } finally {
-        setLoading(false);
+        setCarregando(false);
       }
-    }
+    };
 
-    fetchConcurso();
+    carregarConcurso();
   }, [id]);
 
   /*
-  |------------------------------------------------------------
-  | 🟦 Atualizar concurso
-  |------------------------------------------------------------
+  |----------------------------------------------------------------------
+  | 📎 Monta URL de download corretamente
+  |----------------------------------------------------------------------
   */
-  async function handleSubmit(e) {
+  const getDownloadUrl = (doc) => {
+    const nome =
+      doc?.caminho?.split("/").pop() ||
+      doc?.nome ||
+      "";
+
+    return `http://localhost:5000/api/concursos/download/${nome}`;
+  };
+
+  /*
+  |----------------------------------------------------------------------
+  | 🟦 Submit — atualizar concurso
+  |----------------------------------------------------------------------
+  | Ajustado para enviar:
+  |   PDF → campo "edital"
+  |   PNG/JPG/JPEG → campo "imagens"
+  |----------------------------------------------------------------------
+  */
+  const handleSubmit = async (e) => {
     e.preventDefault();
-
-    const token = localStorage.getItem("adminToken");
-
-    const formData = new FormData();
-    formData.append("titulo", titulo);
-    formData.append("orgao", orgao);
-    formData.append("edital", edital);
-    formData.append("descricao", descricao);
-
-    formData.append("dataInicioInscricao", dataInicio);
-    formData.append("dataFimInscricao", dataFim);
-    formData.append("dataProva", dataProva);
-
-    if (novoDocumento) {
-      formData.append("documento", novoDocumento);
-    }
+    setErro("");
+    setSucesso("");
+    setSalvando(true);
 
     try {
+      const token = localStorage.getItem("adminToken");
+      const formData = new FormData();
+
+      // Campos simples
+      formData.append("titulo", titulo);
+      formData.append("descricao", descricao);
+      formData.append("dataInicioInscricao", dataInicioInscricao);
+      formData.append("dataFimInscricao", dataFimInscricao);
+      formData.append("dataProva", dataProva);
+
+      // Upload correto
+      if (novoDocumento) {
+        const tipo = novoDocumento.type;
+
+        if (tipo === "application/pdf") {
+          formData.append("edital", novoDocumento); // campo correto
+        } else {
+          formData.append("imagens", novoDocumento); // campo correto
+        }
+      }
+
       const res = await fetch(`http://localhost:5000/api/concursos/${id}`, {
         method: "PUT",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          // ❌ NÃO COLOCAR Content-Type aqui
-        },
+        headers: { Authorization: `Bearer ${token}` },
         body: formData,
       });
 
-      const resposta = await res.json();
+      const data = await res.json();
 
       if (!res.ok) {
-        alert(resposta.mensagem || "Erro ao atualizar");
+        setErro(data.mensagem || "Erro ao atualizar concurso.");
         return;
       }
 
-      alert("Concurso atualizado com sucesso!");
-      router.push("/admin/concursos");
+      setSucesso("Concurso atualizado com sucesso!");
 
-    } catch (error) {
-      console.error("Erro:", error);
-      alert("Erro inesperado ao atualizar.");
+      setTimeout(() => router.push("/admin/concursos"), 1200);
+    } catch (err) {
+      setErro("Erro ao conectar ao servidor.");
+    } finally {
+      setSalvando(false);
     }
-  }
+  };
 
-  /*
-  |------------------------------------------------------------
-  | Renderização
-  |------------------------------------------------------------
-  */
-  if (loading) return <p className="p-6">Carregando concurso...</p>;
-  if (!concurso) return <p className="p-6">Concurso não encontrado.</p>;
+  if (carregando) return <p className="p-6 text-black">Carregando...</p>;
+  if (!concurso)
+    return <p className="p-6 text-red-600 text-black">Concurso não encontrado.</p>;
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-100 p-8">
-      <h1 className="text-black text-2xl font-bold mb-6">Editar Concurso</h1>
+    <div className="p-6 max-w-3xl text-black">
+      <h1 className="text-xl font-semibold mb-6 text-black">Editar Concurso</h1>
+
+      {/* Erro */}
+      {erro && (
+        <div className="bg-red-100 border border-red-300 text-red-700 p-3 mb-4 rounded text-black">
+          {erro}
+        </div>
+      )}
+
+      {/* Sucesso */}
+      {sucesso && (
+        <div className="bg-green-100 border border-green-300 text-green-700 p-3 mb-4 rounded text-black">
+          {sucesso}
+        </div>
+      )}
 
       <form
         onSubmit={handleSubmit}
-        className="bg-white shadow-md rounded-lg p-6 space-y-6"
+        className="bg-white shadow-md rounded-lg p-6 space-y-6 text-black"
       >
         {/* Título */}
         <div>
-          <label className="block mb-1 font-semibold text-black">Título</label>
+          <label className="font-semibold text-black">Título</label>
           <input
             type="text"
             value={titulo}
             onChange={(e) => setTitulo(e.target.value)}
-            className="w-full p-2 border rounded text-black placeholder:text-gray-500"
-            required
-          />
-        </div>
-
-        {/* Órgão */}
-        <div>
-          <label className="block mb-1 font-semibold text-black">Órgão</label>
-          <input
-            type="text"
-            value={orgao}
-            onChange={(e) => setOrgao(e.target.value)}
-            className="w-full p-2 border rounded text-black placeholder:text-gray-500"
-          />
-        </div>
-
-        {/* Edital */}
-        <div>
-          <label className="block mb-1 font-semibold text-black">Edital</label>
-          <input
-            type="text"
-            value={edital}
-            onChange={(e) => setEdital(e.target.value)}
             className="w-full p-2 border rounded text-black placeholder:text-gray-500"
           />
         </div>
 
         {/* Descrição */}
         <div>
-          <label className="block mb-1 font-semibold text-black">Descrição</label>
+          <label className="font-semibold text-black">Descrição</label>
           <textarea
             value={descricao}
             onChange={(e) => setDescricao(e.target.value)}
@@ -194,33 +203,27 @@ export default function EditarConcurso() {
         {/* Datas */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
-            <label className="block mb-1 font-semibold text-black">
-              Início das Inscrições
-            </label>
+            <label className="font-semibold text-black">Início das inscrições</label>
             <input
               type="date"
-              value={dataInicio}
-              onChange={(e) => setDataInicio(e.target.value)}
+              value={dataInicioInscricao}
+              onChange={(e) => setDataInicioInscricao(e.target.value)}
               className="w-full p-2 border rounded text-black"
             />
           </div>
 
           <div>
-            <label className="block mb-1 font-semibold text-black">
-              Fim das Inscrições
-            </label>
+            <label className="font-semibold text-black">Fim das inscrições</label>
             <input
               type="date"
-              value={dataFim}
-              onChange={(e) => setDataFim(e.target.value)}
+              value={dataFimInscricao}
+              onChange={(e) => setDataFimInscricao(e.target.value)}
               className="w-full p-2 border rounded text-black"
             />
           </div>
 
           <div>
-            <label className="block mb-1 font-semibold text-black">
-              Data da Prova
-            </label>
+            <label className="font-semibold text-black">Data da prova</label>
             <input
               type="date"
               value={dataProva}
@@ -231,43 +234,51 @@ export default function EditarConcurso() {
         </div>
 
         {/* Documentos atuais */}
-        {concurso.documentos?.length > 0 && (
-          <div>
-            <p className="font-semibold mb-2 text-black">Documentos atuais:</p>
-            <ul className="ml-4 list-disc">
-              {concurso.documentos.map((doc, index) => (
-                <li key={index}>
-                  <a
-                    href={`http://localhost:5000/${doc.caminho}`}
-                    target="_blank"
-                    className="text-blue-700 underline"
-                  >
-                    {doc.nome}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
+        <div className="border-t pt-4">
+          <p className="font-semibold text-black">Documentos atuais:</p>
 
-        {/* Enviar novo documento */}
+          {concurso.documentos?.length ? (
+            <ul className="list-disc ml-6 mt-2">
+              {concurso.documentos.map((doc, i) => {
+                const nome = doc?.caminho?.split("/").pop();
+                return (
+                  <li key={i} className="text-black">
+                    {nome} —
+                    <a
+                      href={getDownloadUrl(doc)}
+                      target="_blank"
+                      className="text-blue-700 hover:underline ml-1"
+                    >
+                      Baixar
+                    </a>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : (
+            <p className="text-black text-sm">Nenhum documento anexado.</p>
+          )}
+        </div>
+
+        {/* Novo documento */}
         <div>
-          <label className="block font-semibold mb-1 text-black">
-            Substituir / Adicionar documento
+          <label className="font-semibold text-black">
+            Substituir / adicionar documento
           </label>
           <input
             type="file"
             onChange={(e) => setNovoDocumento(e.target.files[0])}
-            className="w-full text-black"
+            className="w-full text-black mt-1"
           />
         </div>
 
         {/* Botão */}
         <button
           type="submit"
+          disabled={salvando}
           className="bg-[#0b2c55] text-white px-6 py-2 rounded hover:bg-[#081c38]"
         >
-          Salvar Alterações
+          {salvando ? "Salvando..." : "Salvar Alterações"}
         </button>
       </form>
     </div>

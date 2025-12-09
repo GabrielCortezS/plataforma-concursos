@@ -1,45 +1,51 @@
-// routes/cargoRoutes.js
-// --------------------------------------------------------------
-// ROTAS DE CARGOS
-// Protegidas com JWT
-// --------------------------------------------------------------
-
+// src/routes/cargoRoutes.js
 import express from "express";
-import { autenticar } from "../middlewares/authMiddleware.js";
-
 import {
   criarCargo,
   listarCargos,
-  listarCargoById,
-  listarCargosPorConcurso,
+  listarCargoPorId,
   atualizarCargo,
   deletarCargo
 } from "../controllers/cargoController.js";
+
+import Cargo from "../models/Cargo.js";
 
 const router = express.Router();
 
 /*
 |--------------------------------------------------------------------------
-| ROTAS DE CARGOS
+| 📌 Buscar cargos de um concurso específico
+| GET /api/cargos/concurso/:id
+|--------------------------------------------------------------------------
+| - Usado na tela de inscrição do candidato
+| - Só retorna cargos vinculados ao concurso escolhido
+|--------------------------------------------------------------------------
+*/
+router.get("/concurso/:id", async (req, res) => {
+  try {
+    const concursoId = req.params.id;
+
+    const cargos = await Cargo.find({ concursoId });
+
+    return res.json({ cargos });
+  } catch (error) {
+    return res.status(500).json({
+      mensagem: "Erro ao buscar cargos do concurso",
+      erro: error.message,
+    });
+  }
+});
+
+/*
+|--------------------------------------------------------------------------
+| CRUD PADRÃO DO ADMIN
 |--------------------------------------------------------------------------
 */
 
-// Criar cargo
-router.post("/", autenticar, criarCargo);
-
-// Listar todos os cargos
-router.get("/", autenticar, listarCargos);
-
-// 🔵 Listar cargos por concurso específico (NOVO)
-router.get("/concurso/:concursoId", autenticar, listarCargosPorConcurso);
-
-// Listar cargo por ID
-router.get("/:id", autenticar, listarCargoById);
-
-// Atualizar cargo
-router.put("/:id", autenticar, atualizarCargo);
-
-// Deletar cargo
-router.delete("/:id", autenticar, deletarCargo);
+router.post("/", criarCargo);
+router.get("/", listarCargos);
+router.get("/:id", listarCargoPorId);
+router.put("/:id", atualizarCargo);
+router.delete("/:id", deletarCargo);
 
 export default router;

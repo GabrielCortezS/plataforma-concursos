@@ -1,9 +1,9 @@
 // ============================================================================
 // 📌 CONTROLLER DE CARGOS
-// Cada cargo pertence a um concurso (via campo concursoId)
-// Este arquivo contém CRUD completo + filtros
-// Todos os retornos foram padronizados para arrays diretos,
-// garantindo compatibilidade com o frontend.
+// Cada cargo pertence a um concurso (via campo concursoId).
+// Este arquivo contém CRUD completo + filtros especializados.
+// Todos os retornos foram padronizados para arrays diretos ou objetos simples,
+// garantindo compatibilidade total com o frontend.
 // ============================================================================
 
 import Cargo from "../models/Cargo.js";
@@ -27,7 +27,7 @@ export const criarCargo = async (req, res) => {
 
     return res.status(201).json({
       mensagem: "Cargo criado com sucesso",
-      novoCargo
+      cargo: novoCargo
     });
 
   } catch (error) {
@@ -40,18 +40,17 @@ export const criarCargo = async (req, res) => {
 
 /*
 |--------------------------------------------------------------------------
-| 2) LISTAR TODOS OS CARGOS (CORRIGIDO)
+| 2) LISTAR TODOS OS CARGOS (PADRONIZADO)
 |--------------------------------------------------------------------------
-| Antes retornava { cargos: [...] }
-| Agora retorna diretamente o array: [...]
-| Isso corrige o problema da tela vazia no frontend.
+| Retorna diretamente o array [...], sem objetos intermediários.
+| Compatível com o painel do Admin.
 |--------------------------------------------------------------------------
 */
 export const listarCargos = async (req, res) => {
   try {
     const cargos = await Cargo.find().populate("concursoId");
 
-    return res.json(cargos); // ✔ Agora retornando array direto
+    return res.json(cargos); // ✔ retorno direto
 
   } catch (error) {
     return res.status(500).json({
@@ -63,12 +62,13 @@ export const listarCargos = async (req, res) => {
 
 /*
 |--------------------------------------------------------------------------
-| 3) LISTAR CARGO POR ID (CORRIGIDO)
+| 3) LISTAR CARGO POR ID (PADRONIZADO)
 |--------------------------------------------------------------------------
-| Retorna o cargo diretamente, não dentro de um objeto.
+| Retorna o cargo diretamente.
+| Usado tanto no Admin quanto em telas específicas.
 |--------------------------------------------------------------------------
 */
-export const listarCargoById = async (req, res) => {
+export const listarCargoPorId = async (req, res) => {
   try {
     const cargo = await Cargo.findById(req.params.id).populate("concursoId");
 
@@ -76,7 +76,7 @@ export const listarCargoById = async (req, res) => {
       return res.status(404).json({ mensagem: "Cargo não encontrado" });
     }
 
-    return res.json(cargo); // ✔ retorna cargo direto
+    return res.json(cargo); // ✔ retorno direto
 
   } catch (error) {
     return res.status(500).json({
@@ -88,9 +88,10 @@ export const listarCargoById = async (req, res) => {
 
 /*
 |--------------------------------------------------------------------------
-| 4) LISTAR CARGOS DE UM CONCURSO ESPECÍFICO (CORRIGIDO)
+| 4) LISTAR CARGOS POR CONCURSO (CORRIGIDO)
 |--------------------------------------------------------------------------
-| Retorna APENAS os cargos vinculados ao concurso informado.
+| Rota usada na tela de inscrição do candidato.
+| Retorna apenas cargos com o campo concursoId = req.params.concursoId.
 | Retorno = array direto.
 |--------------------------------------------------------------------------
 */
@@ -100,11 +101,11 @@ export const listarCargosPorConcurso = async (req, res) => {
 
     const cargos = await Cargo.find({ concursoId }).populate("concursoId");
 
-    return res.json(cargos); // ✔ retorna somente o array
+    return res.json(cargos); // ✔ retorno já compatível com o frontend
 
   } catch (error) {
     return res.status(500).json({
-      mensagem: "Erro ao listar cargos por concurso",
+      mensagem: "Erro ao listar cargos do concurso",
       erro: error.message
     });
   }
@@ -114,7 +115,7 @@ export const listarCargosPorConcurso = async (req, res) => {
 |--------------------------------------------------------------------------
 | 5) ATUALIZAR CARGO
 |--------------------------------------------------------------------------
-| Atualiza campos específicos de um cargo.
+| Atualiza um cargo específico.
 |--------------------------------------------------------------------------
 */
 export const atualizarCargo = async (req, res) => {
@@ -131,7 +132,7 @@ export const atualizarCargo = async (req, res) => {
 
     return res.json({
       mensagem: "Cargo atualizado com sucesso",
-      cargoAtualizado
+      cargo: cargoAtualizado
     });
 
   } catch (error) {
@@ -146,7 +147,7 @@ export const atualizarCargo = async (req, res) => {
 |--------------------------------------------------------------------------
 | 6) DELETAR CARGO
 |--------------------------------------------------------------------------
-| Remove o cargo permanentemente.
+| Remove o cargo permanentemente do banco.
 |--------------------------------------------------------------------------
 */
 export const deletarCargo = async (req, res) => {
