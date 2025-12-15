@@ -1,75 +1,60 @@
 // src/services/mercadoPago.js
-// Serviço responsável por integrar com o Mercado Pago (SDK nova 2024+)
+// Serviço oficial de integração com o Mercado Pago (SDK Nova 2024+)
 
 import { MercadoPagoConfig, Preference } from "mercadopago";
 
 /*
-|-----------------------------------------------------------------
-| 🔹 Inicialização da SDK do Mercado Pago (versão nova)
-|-----------------------------------------------------------------
-| A SDK antiga utilizava:
-|    mercadopago.configure({ access_token })
+|--------------------------------------------------------------------------
+| 🔧 Inicialização da SDK do Mercado Pago
+|--------------------------------------------------------------------------
+| O Token utilizado vem do .env:
+|   MP_ACCESS_TOKEN=xxxx
 |
-| Agora, desde 2024, toda a integração é feita através das classes:
-|    → MercadoPagoConfig (configura o cliente)
-|    → Preference (criação da preferência de pagamento)
-|
-| O client configurado aqui é reutilizado em todo o serviço.
+| IMPORTANTE:
+| - Esse token pode ser TESTE (TEST-xxx) ou PRODUÇÃO (APP_USR-xxx)
+| - O SDK novo aceita apenas campo "accessToken"
+|--------------------------------------------------------------------------
 */
 const client = new MercadoPagoConfig({
-  accessToken: process.env.MERCADO_PAGO_ACCESS_TOKEN, // token definido no .env
+  accessToken: process.env.MP_ACCESS_TOKEN, // ✔ O CERTO!
 });
 
 /*
-|-----------------------------------------------------------------
+|--------------------------------------------------------------------------
 | 🔹 Função: criarPreferenciaPagamento(inscricao)
-|-----------------------------------------------------------------
-| Objetivo:
-|   - Criar a preferência de pagamento no Mercado Pago
-|   - Retornar a URL 'init_point', onde o candidato será redirecionado
-|   - Armazenar IDs e status no controller
-|
-| Parâmetros:
-|   - inscricao → objeto populado com dados do concurso e cargo
-|
-| Importante:
-|   - O valor da inscrição vem do cargo selecionado.
-|   - O Mercado Pago gera:
-|        → paymentId (ID da preferência)
-|        → init_point (link de pagamento)
+|--------------------------------------------------------------------------
+| Recebe a inscrição populada (concurso + cargo)
+| Gera a preferência no Mercado Pago e retorna:
+|  - id          → ID da preferência (paymentId)
+|  - init_point  → link onde o usuário realiza o pagamento
+|--------------------------------------------------------------------------
 */
 export async function criarPreferenciaPagamento(inscricao) {
+
   /*
-  |---------------------------------------------------------------
-  | 🔹 Determinar valor da inscrição
-  |---------------------------------------------------------------
-  | Caso o valor não exista no cargo, definimos um fallback de 10
-  | apenas para evitar erro em ambiente de testes.
+  |--------------------------------------------------------------------------
+  | 🔢 Valor da inscrição
+  |--------------------------------------------------------------------------
+  | Se o cargo não tiver valor definido, usamos 10 (valor fictício).
   */
   const valorInscricao =
-    inscricao.cargoId?.valorInscricao && inscricao.cargoId.valorInscricao > 0
+    inscricao.cargoId?.valorInscricao > 0
       ? inscricao.cargoId.valorInscricao
       : 10;
 
+
   /*
-  |---------------------------------------------------------------
-  | 🔹 Dados enviados ao Mercado Pago
-  |---------------------------------------------------------------
-  | "items" → lista de produtos/serviços da cobrança
-  | "back_urls" → URLs para onde o usuário será redirecionado
-  | "auto_return" → retorna automático quando pagamento aprovado
-  |
-  | OBS:
-  |   BASE_URL deve apontar para o frontend,
-  |   pois é o candidato que volta para a interface após pagar.
+  |--------------------------------------------------------------------------
+  | 📦 Dados enviados ao Mercado Pago
+  |--------------------------------------------------------------------------
   */
   const preferenceData = {
     items: [
       {
-        title: `Inscrição: ${inscricao.concursoId.titulo}`, // nome do concurso
+        title: `Inscrição: ${inscricao.concursoId.titulo}`,
         quantity: 1,
+        unit_price: Number(valorInscricao),
         currency_id: "BRL",
-        unit_price: valorInscricao, // valor real definido no cargo
       },
     ],
 
@@ -79,38 +64,44 @@ export async function criarPreferenciaPagamento(inscricao) {
       pending: `${process.env.BASE_URL}/pagamento/pendente`,
     },
 
+    // Retorno automático ao seu site
     auto_return: "approved",
   };
 
+
   /*
-  |---------------------------------------------------------------
-  | 🔹 Criar a preferência (SDK nova)
-  |---------------------------------------------------------------
-  | "Preference" é a classe responsável por lidar com pagamentos.
-  | Antes da atualização da SDK, o método era:
-  |    mercadopago.preferences.create()
+  |--------------------------------------------------------------------------
+  | 🧾 Criando preferência (SDK nova)
+  |--------------------------------------------------------------------------
+  | ANTIGO:
+  |   mercadopago.preferences.create()
   |
-  | Agora precisamos instanciar:
-  |    new Preference(client)
+  | NOVO (2024+):
+  |   const pref = new Preference(client);
+  |   pref.create({ body })
   |
-  | E então chamar ".create({ body })"
+  | Retorno da SDK NOVA:
+  | {
+  |   id: "123",
+  |   init_point: "https://pagamento...",
+  |   sandbox_init_point: "https://..."
+  | }
+  |--------------------------------------------------------------------------
   */
   const preference = new Preference(client);
 
-  /*
-  |---------------------------------------------------------------
-  | 🔹 Chamada oficial ao Mercado Pago
-  |---------------------------------------------------------------
-  | A resposta contém:
-  |   - response.id  → ID da preferência (paymentId)
-  |   - response.init_point → URL para redirecionamento do pagamento
-  |
-  | Esses dados serão tratados no controller e guardados na inscrição.
-  */
   const response = await preference.create({
     body: preferenceData,
   });
 
-  // Retorna a resposta completa para o controller
-  return response;
+  /*
+  |--------------------------------------------------------------------------
+  | Retorno para o Controller
+  |--------------------------------------------------------------------------
+  */
+  return {
+    id: response.id,
+    init_point: response.init_point,
+    sandbox_init_point: response.sandbox_init_point,
+  };
 }

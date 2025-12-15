@@ -7,6 +7,7 @@
 // - download de comprovantes
 // - atualização (admin)
 // - remoção (admin)
+// - retorno estruturado com paymentStatus
 // ============================================================================
 
 import Inscricao from "../models/Inscricao.js";
@@ -14,6 +15,24 @@ import Concurso from "../models/Concurso.js";
 import Cargo from "../models/Cargo.js";
 import { deleteFile } from "../utils/fileUtils.js";
 import { gerarComprovanteInscricao } from "../utils/gerarComprovanteInscricao.js";
+
+/*
+|--------------------------------------------------------------------------
+| 🟩 FUNÇÃO AUXILIAR → Formata a resposta da inscrição
+|--------------------------------------------------------------------------
+| Corrige o problema de o front não receber paymentStatus corretamente.
+| Todas as rotas que retornam inscrição devem usar esta função.
+|--------------------------------------------------------------------------
+*/
+function formatarInscricao(inscricao) {
+  if (!inscricao) return null;
+
+  return {
+    ...inscricao.toObject(),
+    paymentStatus: inscricao.paymentStatus || "pendente",
+    statusPagamento: inscricao.paymentStatus || "pendente",
+  };
+}
 
 /*
 |--------------------------------------------------------------------------
@@ -29,7 +48,6 @@ export const criarInscricao = async (req, res) => {
       return res.status(401).json({ mensagem: "Candidato não autenticado." });
     }
 
-    // Impedir duplicidade de inscrição
     const inscricaoExistente = await Inscricao.findOne({
       candidatoId,
       concursoId,
@@ -41,7 +59,6 @@ export const criarInscricao = async (req, res) => {
       });
     }
 
-    // Validar termos
     const { nomeCompleto, cpf, email, telefone, cargoId, concordaTermos } =
       req.body;
 
@@ -58,8 +75,8 @@ export const criarInscricao = async (req, res) => {
       });
     }
 
-    // Informações técnicas
     const caminhoFoto = req.file ? req.file.path : null;
+
     const ipConcordancia =
       req.headers["x-forwarded-for"] || req.socket.remoteAddress;
     const userAgent = req.headers["user-agent"] || "desconhecido";
@@ -86,6 +103,7 @@ export const criarInscricao = async (req, res) => {
       ipConcordancia,
       userAgent,
       numeroInscricao,
+      paymentStatus: "pendente", // ✔ inicia sempre como pendente
     });
 
     // Gerar comprovante PDF
@@ -111,7 +129,7 @@ export const criarInscricao = async (req, res) => {
 
     return res.status(201).json({
       mensagem: "Inscrição realizada com sucesso",
-      inscricao: novaInscricao,
+      inscricao: formatarInscricao(novaInscricao),
       comprovanteUrl: caminhoComprovante
         ? `${baseUrl}/${caminhoComprovante.replace(/^\/*/, "")}`
         : null,
@@ -136,7 +154,9 @@ export const listarInscricoes = async (req, res) => {
       .populate("cargoId")
       .populate("candidatoId");
 
-    return res.json({ inscricoes });
+    return res.json({
+      inscricoes: inscricoes.map((i) => formatarInscricao(i)),
+    });
   } catch (error) {
     return res.status(500).json({
       mensagem: "Erro ao listar inscrições",
@@ -170,7 +190,9 @@ export const downloadFoto = async (req, res) => {
 
 /*
 |--------------------------------------------------------------------------
-| 🟦 BUSCAR INSCRIÇÃO POR ID (ADMIN)
+| 🟦 BUSCAR INSCRIÇÃO POR ID (ADMIN + FRONT PAGAMENTO)
+|--------------------------------------------------------------------------
+| ❗ ESTA ROTA PRECISA RETORNAR paymentStatus PARA O FRONT
 |--------------------------------------------------------------------------
 */
 export const buscarInscricaoPorId = async (req, res) => {
@@ -185,7 +207,7 @@ export const buscarInscricaoPorId = async (req, res) => {
     if (!inscricao)
       return res.status(404).json({ mensagem: "Inscrição não encontrada" });
 
-    return res.json(inscricao);
+    return res.json(formatarInscricao(inscricao));
   } catch (error) {
     return res.status(500).json({
       mensagem: "Erro ao buscar inscrição",
@@ -230,7 +252,7 @@ export const atualizarInscricao = async (req, res) => {
 
     return res.json({
       mensagem: "Inscrição atualizada com sucesso",
-      inscricao: atualizado,
+      inscricao: formatarInscricao(atualizado),
     });
   } catch (error) {
     return res.status(500).json({
@@ -283,7 +305,9 @@ export const listarMinhasInscricoes = async (req, res) => {
       .populate("concursoId")
       .populate("cargoId");
 
-    return res.json({ inscricoes });
+    return res.json({
+      inscricoes: inscricoes.map((i) => formatarInscricao(i)),
+    });
   } catch (error) {
     return res.status(500).json({
       mensagem: "Erro ao carregar suas inscrições",
@@ -295,6 +319,8 @@ export const listarMinhasInscricoes = async (req, res) => {
 /*
 |--------------------------------------------------------------------------
 | 🟦 BUSCAR INSCRIÇÃO DO CANDIDATO LOGADO
+|--------------------------------------------------------------------------
+| ❗ IMPORTANTE → tela /candidato/inscricao/[id] E /pagamento/[id] usam essa rota
 |--------------------------------------------------------------------------
 */
 export const buscarInscricaoDoCandidato = async (req, res) => {
@@ -314,7 +340,7 @@ export const buscarInscricaoDoCandidato = async (req, res) => {
         mensagem: "Inscrição não encontrada ou não pertence a você.",
       });
 
-    return res.json({ inscricao });
+    return res.json(formatarInscricao(inscricao));
   } catch (error) {
     return res.status(500).json({
       mensagem: "Erro ao buscar inscrição",

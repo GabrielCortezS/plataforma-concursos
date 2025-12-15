@@ -4,8 +4,12 @@
 /*
 |---------------------------------------------------------
 | 📄 Tela: Minhas Inscrições
+|---------------------------------------------------------
 | - Lista todas as inscrições do candidato logado
-| - Permite visualizar comprovante e detalhes
+| - Permite:
+|     → Baixar comprovante de inscrição
+|     → Acessar tela de pagamento da inscrição
+| - Layout responsivo (mobile / desktop)
 |---------------------------------------------------------
 */
 
@@ -17,6 +21,11 @@ export default function MinhasInscricoesPage() {
   const [inscricoes, setInscricoes] = useState([]);
   const [carregando, setCarregando] = useState(true);
 
+  /*
+  |---------------------------------------------------------
+  | 🔄 Buscar inscrições do candidato logado
+  |---------------------------------------------------------
+  */
   useEffect(() => {
     async function carregarInscricoes() {
       const token = localStorage.getItem("token");
@@ -24,13 +33,18 @@ export default function MinhasInscricoesPage() {
 
       try {
         const res = await fetch("http://localhost:5000/api/inscricoes/minhas", {
-          headers: { Authorization: `Bearer ${token}` },
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         });
 
         const data = await res.json();
-        if (res.ok) setInscricoes(data.inscricoes || []);
+
+        if (res.ok) {
+          setInscricoes(data.inscricoes || []);
+        }
       } catch (error) {
-        console.log("Erro ao carregar inscrições:", error);
+        console.error("Erro ao carregar inscrições:", error);
       } finally {
         setCarregando(false);
       }
@@ -46,18 +60,22 @@ export default function MinhasInscricoesPage() {
       <main className="flex-1 max-w-4xl mx-auto px-6 py-10">
         <h1 className="text-3xl font-bold mb-6">Minhas Inscrições</h1>
 
+        {/* Estado de carregamento */}
         {carregando && <p>Carregando...</p>}
 
+        {/* Nenhuma inscrição */}
         {!carregando && inscricoes.length === 0 && (
           <p className="text-gray-600">Você ainda não possui inscrições.</p>
         )}
 
+        {/* Lista de inscrições */}
         <div className="space-y-4">
           {inscricoes.map((item) => (
             <div
               key={item._id}
               className="p-4 border rounded-lg shadow-sm bg-gray-50"
             >
+              {/* Dados do concurso */}
               <h2 className="text-xl font-semibold">
                 {item.concursoId?.titulo}
               </h2>
@@ -70,16 +88,26 @@ export default function MinhasInscricoesPage() {
                 Nº da inscrição: {item.numeroInscricao}
               </p>
 
-       <div className="mt-8">
-            <a
-              href={`http://localhost:5000/${item.comprovantePdf}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="bg-green-600 text-white px-6 py-3 rounded-md hover:bg-green-700 transition"
-            >
-              📄 Baixar comprovante de inscrição
-            </a>
-          </div>
+
+              <div className="mt-6 flex flex-col sm:flex-row gap-4">
+                {/* 📄 Baixar comprovante */}
+                <a
+                  href={`http://localhost:5000/${item.comprovantePdf}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="bg-green-600 text-white px-5 py-2 rounded-md hover:bg-green-700 transition text-center"
+                >
+                  📄 Baixar comprovante
+                </a>
+
+                {/* 💳 Ver pagamento */}
+                <a
+                  href={`/candidato/pagamento/${item._id}`}
+                  className="bg-[#0b2c55] text-white px-5 py-2 rounded-md hover:bg-[#081c38] transition text-center"
+                >
+                  💳 Ver pagamento
+                </a>
+              </div>
             </div>
           ))}
         </div>
